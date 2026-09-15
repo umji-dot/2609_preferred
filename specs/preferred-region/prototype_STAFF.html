@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Prototype — STAFF</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --fg: #1a1a1a; --muted: #666; --border: #e2e4e8;
+    --accent: #2563eb; --annotation-bg: #eef2ff; --annotation-border: #c7d2fe;
+  }
+  body { font-family: -apple-system,"Segoe UI","Malgun Gothic",sans-serif; background: var(--bg); color: var(--fg); margin: 0; }
+  .toolbar { position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 16px; z-index: 10; flex-wrap: wrap; }
+  .toolbar h1 { font-size: 1em; margin: 0; }
+  .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .segmented button { border: none; background: var(--panel); padding: 6px 14px; cursor: pointer; font-size: 0.9em; }
+  .segmented button.active { background: var(--accent); color: white; }
+  main { max-width: 1900px; margin: 24px auto; padding: 0 20px; }
+  .section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .section h2 { margin-top: 0; font-size: 1.05em; }
+  .canvas { border: 1px dashed var(--border); border-radius: 6px; padding: 16px; min-height: 80px; overflow-x: auto; }
+  .annotation { background: var(--annotation-bg); border: 1px solid var(--annotation-border); border-radius: 6px; padding: 8px 12px; font-size: 0.85em; margin-top: 8px; color: #3730a3; }
+  .annotation.always { background: #fef3c7; border-color: #fcd34d; color: #78350f; }
+  .legend { font-size: 0.8em; color: var(--muted); margin-top: 24px; }
+
+  body[data-mode="tobe"] .asis-only { display: none; }
+  body[data-mode="asis"] .tobe-only { display: none; }
+
+  /* ── 좌: 화면 / 우: 설명 레이아웃 — 2026-09-10 총괄 요청("scr별로 상하로 떨어뜨려 모두 표시가 안됨, 왼쪽 화면 오른쪽 설명으로") 반영.
+     템플릿의 최상위 구조(section > h2/canvas/annotation)는 유지하고 section 내부 하위 레이아웃만 재구성함(공통규칙.md §9.1).
+     2026-09-10(2차) 총괄 피드백("캡처 비율과 현재 프로토타입 비율 차이가 큼") 반영: .scr-screen에 min-width를 둬
+     실제 캡처(넓은 사이드바+필터그리드+넓은 테이블)가 좁은 컬럼 안에서 찌그러지지 않게 하고, 그보다 좁은
+     뷰포트에서는 설명이 자연스럽게 아래로 내려가도록 함(강제 축소 대신 wrap). ── */
+  .scr-layout { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .scr-screen { flex: 1 1 1200px; min-width: 980px; }
+  .scr-sub { display: block; font-size: 0.72em; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .scr-desc { flex: 1 1 320px; min-width: 260px; max-width: 360px; position: sticky; top: 66px; }
+  .scr-desc-block { margin-bottom: 12px; }
+  .scr-desc-block h3 { font-size: 0.72em; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .scr-desc-block p { margin: 0; font-size: 0.86em; line-height: 1.55; }
+  .scr-interact-hint { margin-top: 10px; font-size: 0.82em; background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; border-radius: 6px; padding: 8px 12px; line-height: 1.6; }
+  .scr-interact-hint b { font-weight: 700; }
+  @media (max-width: 1500px) {
+    .scr-desc { position: static; max-width: 100%; }
+  }
+
+  /* ── IMAS Staff Design System 참조 (커넥트/02_완료된_프로젝트/현장서비스_개선/Admin/현장서비스_어드민_개선안.html에서 근사 추출) ── */
+  :root {
+    --imas-topbar: #223240;
+    --imas-topbar-text: #a7b1c5;
+    --imas-content-border: #d4d4d5;
+    --imas-table-hd-bg: #f8f9fa;
+    --imas-table-border: #e2e3e4;
+    --imas-text-primary: #222222;
+    --imas-text-muted: #4d4d4d;
+    --imas-btn-action: #2a7ad0;
+    --imas-highlight: #fff3cd;
+    --imas-highlight-border: #ffcf5c;
+    --imas-error: #ff0000;
+    --imas-st-completed: #15ab39;
+  }
+  .imas-frame { border: 1px solid var(--imas-content-border); border-radius: 6px; overflow: hidden; background: #fff; }
+  .imas-topbar { background: var(--imas-topbar); color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .imas-topbar .path { color: var(--imas-topbar-text); font-weight: 400; }
+
+  .imas-page { padding: 16px; }
+  .imas-page-title { font-size: 18px; font-weight: 600; color: var(--imas-text-primary); margin-bottom: 12px; }
+  .imas-status-tabs-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .imas-status-tabs { display: flex; background: white; border: 1px solid var(--imas-content-border); border-radius: 4px; overflow: hidden; width: fit-content; }
+  .imas-stab { padding: 7px 16px; font-size: 12.5px; font-weight: 500; color: #5a5a5a; border-right: 1px solid var(--imas-content-border); }
+  .imas-stab:last-child { border-right: none; }
+  .imas-stab.on { background: var(--imas-topbar); color: white; font-weight: 600; }
+  .imas-btn-dark { background: #444; color: #fff; border: none; border-radius: 4px; padding: 7px 14px; font-size: 12.5px; }
+  .imas-filter-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px; background: var(--imas-table-hd-bg); border: 1px solid var(--imas-content-border); border-radius: 6px; }
+  .imas-filter-left { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; row-gap: 8px; }
+  .imas-filter-group { display: flex; flex-direction: column; gap: 4px; }
+  .imas-filter-group.new-field .imas-filter-label { color: var(--imas-btn-action); font-weight: 700; }
+  .imas-filter-label { font-size: 11.5px; font-weight: 500; color: var(--imas-text-primary); }
+  .imas-filter-select, .imas-filter-input { height: 30px; border: 1px solid var(--imas-content-border); border-radius: 4px; padding: 5px 10px; font-size: 12.5px; color: var(--imas-text-muted); background: white; font-family: inherit; }
+  .imas-filter-input.new-field { border-color: var(--imas-btn-action); background: #eef6ff; }
+  .imas-btn-search { height: 30px; border-radius: 4px; padding: 0 16px; font-size: 12.5px; background: white; border: 1px solid var(--imas-content-border); color: #5a5a5a; cursor: pointer; }
+  .imas-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .imas-table th { background: var(--imas-table-hd-bg); color: var(--imas-text-muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--imas-table-border); text-align: left; white-space: nowrap; }
+  .imas-table td { padding: 8px 10px; border-bottom: 1px solid var(--imas-table-border); color: var(--imas-text-primary); white-space: nowrap; }
+  .imas-table th.new, .imas-table td.new { background: #eef6ff; }
+  .imas-popup { max-width: 460px; border: 1px solid var(--imas-content-border); border-radius: 6px; background: #fff; }
+  .imas-popup-hd { background: #f8f9fa; padding: 12px 16px; font-size: 14px; font-weight: 700; border-bottom: 1px solid var(--imas-content-border); }
+  .imas-popup-body { padding: 16px; font-size: 13px; }
+  .imas-field { margin-bottom: 12px; }
+  .imas-field label { display: block; font-size: 12px; color: var(--imas-text-muted); margin-bottom: 4px; }
+  .imas-field .value { border: 1px solid var(--imas-content-border); border-radius: 4px; padding: 8px 10px; background: #f9f9f9; color: var(--imas-text-primary); font-size: 13px; }
+  .imas-field .value.readonly { background: #f3f3f3; color: #999; }
+  .imas-btn { display: inline-block; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; border: none; cursor: default; }
+  .imas-btn.primary { background: var(--imas-btn-action); color: #fff; }
+  .imas-btn.disabled { background: #e0e1e2; color: #999; }
+  .imas-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .imas-badge.on { background: #e6f9ea; color: var(--imas-st-completed); }
+  .imas-badge.off { background: #f3f3f3; color: #999; }
+  .imas-tabs-row { display: flex; border-bottom: 1px solid var(--imas-content-border); margin-bottom: 14px; }
+  .imas-tab { padding: 9px 18px; font-size: 12.5px; font-weight: 600; color: #5a5a5a; border-bottom: 2px solid transparent; cursor: pointer; user-select: none; }
+  .imas-tab.on { color: var(--imas-btn-action); border-bottom-color: var(--imas-btn-action); }
+
+  /* ── 실제 STAFF "푸시 알림 발송 이력" 화면 캡처 근거 레이아웃 (00_자료/STAFF 푸시 알림 발송 이력 메뉴.png) ── */
+  .imas-shell { display: flex; border: 1px solid var(--imas-content-border); border-radius: 6px; overflow: hidden; }
+  .imas-sidebar { width: 140px; flex-shrink: 0; background: #1c2b3a; color: #aab4c2; font-size: 11.5px; }
+  .imas-sidebar .grp { padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .imas-sidebar .grp.expanded { background: #16212c; font-weight: 700; color: #fff; }
+  .imas-sidebar .sub { padding: 7px 14px 7px 22px; border-bottom: 1px solid rgba(255,255,255,.04); }
+  .imas-sidebar .sub.active { color: #fff; background: #2a3b4d; font-weight: 700; }
+  .imas-main2 { flex: 1; background: #fff; padding: 16px; min-width: 0; }
+  .imas-filter-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px; }
+  .imas-filter-grid .imas-filter-group { min-width: 0; }
+  .imas-filter-grid .imas-filter-select, .imas-filter-grid .imas-filter-input { width: 100%; }
+  .imas-search-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .imas-search-row .imas-filter-input { flex: 1; }
+  .imas-pagination { display: flex; gap: 4px; justify-content: center; margin-top: 12px; font-size: 12px; color: #5a5a5a; }
+  .imas-pagination span { padding: 4px 9px; border: 1px solid var(--imas-content-border); border-radius: 4px; cursor: pointer; }
+  .imas-pagination span.on { background: var(--imas-topbar); color: #fff; }
+  .imas-table td.fail { color: var(--imas-error); }
+  .imas-empty-row td { text-align: center; color: #999; padding: 18px 10px; }
+</style>
+</head>
+<body data-mode="tobe">
+
+<div class="toolbar">
+  <h1>STAFF — 관심지역 알림 프로토타입</h1>
+  <div class="segmented">
+    <button id="btn-tobe" class="active" onclick="setMode('tobe')">TO-BE (개선안)</button>
+    <button id="btn-asis" onclick="setMode('asis')">AS-IS (현행)</button>
+  </div>
+  <span style="color:var(--muted); font-size:0.85em;">근거: PRD_STAFF.md / 기능정의서_STAFF.md</span>
+</div>
+
+<main>
+
+  <div class="section" id="scr-01-02">
+    <div class="scr-layout">
+      <div class="scr-screen">
+        <h2>[SCR-01·SCR-02] 푸시알림 발송 이력<span class="scr-sub">"관심지역 알림" 발송 타입 추가(SCR-01) + "알림톡 및 SMS 발송 이력" 신규 탭(SCR-02) — 실제로는 같은 메뉴의 탭 2개입니다.</span></h2>
+        <div class="canvas">
+          <div class="tobe-only">
+            <div class="imas-shell">
+              <div class="imas-sidebar">
+                <div class="grp">고객관리</div>
+                <div class="grp">단말기</div>
+                <div class="grp">업체관리</div>
+                <div class="grp expanded">차량관리</div>
+                <div class="sub">차스펙관리</div>
+                <div class="sub">차량 관리</div>
+                <div class="sub">차량 업데이트 관리</div>
+                <div class="sub">차량이미지 관리</div>
+                <div class="sub">설치 메뉴얼 관리</div>
+                <div class="sub">디지털 키 메뉴얼</div>
+                <div class="sub">펌웨어 설치 현황</div>
+                <div class="sub">펌웨어 버전관리</div>
+                <div class="sub">정비 서비스</div>
+                <div class="sub">현장 서비스</div>
+                <div class="sub">알림 관리</div>
+                <div class="sub active">푸시 알림 발송 이력</div>
+                <div class="grp">사업관리</div>
+                <div class="grp">기타</div>
+                <div class="grp">로그아웃</div>
+              </div>
+              <div class="imas-main2">
+                <div class="imas-page-title">푸시 알림 발송 이력</div>
+                <div class="imas-tabs-row">
+                  <div class="imas-tab on" id="staff-tab-scr01" onclick="staffTab('scr01')">푸시 발송 이력</div>
+                  <div class="imas-tab" id="staff-tab-scr02" onclick="staffTab('scr02')">알림톡 및 SMS 발송 이력 (신규)</div>
+                </div>
+
+                <div id="staff-pane-scr01">
+                  <div class="imas-filter-grid">
+                    <div class="imas-filter-group"><div class="imas-filter-label">푸시 발송 타입</div>
+                      <select class="imas-filter-select new-field" id="staff-f-type" onchange="staffFilterType(this)">
+                        <option value="전체">전체</option>
+                        <option value="과속 주행">과속 주행</option>
+                        <option value="배터리 위험">배터리 위험</option>
+                        <option value="관심지역 알림" style="font-weight:700;">관심지역 알림 (신규)</option>
+                      </select>
+                    </div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">업체</div><select class="imas-filter-select"><option>(주)퍼스트렌트카</option></select></div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">지점</div><select class="imas-filter-select"><option>전체</option></select></div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">푸시 발송 일자 시작일</div><input class="imas-filter-input" value="2026-09-08"></div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">푸시 발송 일자 종료일</div><input class="imas-filter-input" value="2026-09-09"></div>
+                  </div>
+                  <div class="imas-search-row">
+                    <input class="imas-filter-input" placeholder="푸시제목, 푸시내용, 차량 번호, 업체명, 지점명으로 검색">
+                    <button class="imas-btn-search">조회</button>
+                  </div>
+                  <table class="imas-table" id="staff-table-scr01">
+                    <tr><th>푸시 발송 타입</th><th>업체명</th><th>지점명</th><th>차량번호</th><th>차량모델</th><th>푸시 제목</th><th>푸시 내용</th><th>발송 건수</th><th>푸시 발송일자</th></tr>
+                    <tr class="new" data-row data-type="관심지역 알림"><td class="new">관심지역 알림 (신규)</td><td class="new">(주)퍼스트렌트카</td><td class="new">이천지점</td><td class="new">34허9571</td><td class="new">쏘나타</td><td class="new">관심지역 진입</td><td class="new">(주)퍼스트렌트카 - 이천지점 34허9571 (쏘나타) - 인천항 인근 관심지역 진입</td><td class="new">1</td><td class="new">2026-09-09 14:22:10</td></tr>
+                    <tr data-row data-type="과속 주행"><td>과속 주행</td><td>(주)퍼스트렌트카</td><td>이천지점</td><td>34허9571</td><td>쏘나타</td><td>과속 주행</td><td>(주)퍼스트렌트카 - 이천지점 34허9571 (쏘나타) - 시속 137km</td><td>10</td><td>2026-09-09 14:44:35</td></tr>
+                    <tr data-row data-type="배터리 위험"><td>배터리 위험</td><td>(주)퍼스트렌트카</td><td>이천지점</td><td>133하1002</td><td>모닝</td><td>배터리 위험</td><td>(주)퍼스트렌트카 - 이천지점 133하1002 (모닝) - 배터리 전압 10.8V 이하</td><td>9</td><td>2026-09-09 13:37:44</td></tr>
+                    <tr class="imas-empty-row" id="staff-scr01-empty" style="display:none;"><td colspan="9">조회 조건에 맞는 결과가 없습니다.</td></tr>
+                  </table>
+                  <div class="imas-pagination"><span class="on" onclick="staffPage(this)">1</span><span onclick="staffPage(this)">2</span><span onclick="staffPage(this)">3</span><span onclick="staffPage(this)">4</span><span onclick="staffPage(this)">5</span><span>…</span><span onclick="staffPage(this)">9</span></div>
+                </div>
+
+                <div id="staff-pane-scr02" style="display:none;">
+                  <div class="imas-filter-grid">
+                    <div class="imas-filter-group new-field"><div class="imas-filter-label">채널 (신규)</div>
+                      <select class="imas-filter-select new-field" id="staff-f-channel" onchange="staffFilterScr02()">
+                        <option value="전체">전체</option>
+                        <option value="알림톡">알림톡</option>
+                        <option value="SMS(전환됨)">SMS(전환됨)</option>
+                      </select>
+                    </div>
+                    <div class="imas-filter-group new-field"><div class="imas-filter-label">발송 결과 (신규)</div>
+                      <select class="imas-filter-select new-field" id="staff-f-result" onchange="staffFilterScr02()">
+                        <option value="전체">전체</option>
+                        <option value="성공">성공</option>
+                        <option value="실패">실패</option>
+                      </select>
+                    </div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">업체</div><select class="imas-filter-select"><option>(주)퍼스트렌트카</option></select></div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">지점</div><select class="imas-filter-select"><option>전체</option></select></div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">발송 일자 시작일</div><input class="imas-filter-input" value="2026-09-08"></div>
+                    <div class="imas-filter-group"><div class="imas-filter-label">발송 일자 종료일</div><input class="imas-filter-input" value="2026-09-09"></div>
+                  </div>
+                  <div class="imas-search-row">
+                    <input class="imas-filter-input" placeholder="차량 번호, 업체명, 지점명으로 검색">
+                    <button class="imas-btn-search">조회</button>
+                  </div>
+                  <table class="imas-table" id="staff-table-scr02">
+                    <tr><th class="new">업체명</th><th class="new">지점명</th><th>차량번호</th><th>차량모델</th><th class="new">발송 내용</th><th class="new">채널</th><th class="new">발송 결과</th><th class="new">실패 사유</th><th>발송일시</th></tr>
+                    <tr data-row data-channel="알림톡" data-result="성공"><td class="new">(주)퍼스트렌트카</td><td class="new">이천지점</td><td>34허9571</td><td>쏘나타</td><td class="new">[34허9571] [쏘나타] 관심지역 진입</td><td class="new">알림톡</td><td class="new"><span class="imas-badge on">성공</span></td><td class="new">-</td><td>2026-09-09 14:22:15</td></tr>
+                    <tr data-row data-channel="알림톡" data-result="실패"><td class="new">주식회사 우리렌트카</td><td class="new">남양주지점</td><td>146하9836</td><td>그랜저</td><td class="new">[146하9836] [그랜저] 관심지역 이탈</td><td class="new">알림톡</td><td class="new"><span class="imas-badge off">실패</span></td><td class="new fail">K3020 · 알림톡 차단</td><td>2026-09-09 15:03:41</td></tr>
+                    <tr class="imas-empty-row" id="staff-scr02-empty" style="display:none;"><td colspan="9">조회 조건에 맞는 결과가 없습니다.</td></tr>
+                  </table>
+                  <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+                    <button class="imas-btn-search new-field" onclick="staffMockDownload()">엑셀 다운로드</button>
+                    <span id="staff-download-msg" style="display:none; font-size:11px; color:var(--imas-accent, #2a6df5);">✔ 엑셀 파일을 다운로드했습니다 (mock)</span>
+                  </div>
+                  <div class="imas-pagination"><span class="on" onclick="staffPage(this)">1</span><span onclick="staffPage(this)">2</span><span onclick="staffPage(this)">3</span><span>…</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="scr-interact-hint">🖱️ <b>이 화면에서 클릭해볼 수 있는 것</b> — ① 상단 탭 <b>[푸시 발송 이력]</b> ↔ <b>[알림톡 및 SMS 발송 이력]</b> 클릭 → SCR-01/SCR-02 전환 ② SCR-01의 <b>푸시 발송 타입</b> 드롭다운에서 "관심지역 알림" 선택 → 해당 타입만 필터링 ③ SCR-02의 <b>채널</b>/<b>발송 결과</b> 드롭다운 선택 → 목록 mock 필터링 ④ SCR-02의 <b>[엑셀 다운로드]</b> 클릭 → 다운로드 완료 mock 메시지 노출 ⑤ 하단 페이지 번호 클릭 → 선택 상태만 전환(목업, 실제 페이지 이동 없음)</div>
+      </div>
+      <aside class="scr-desc">
+        <div class="scr-desc-block">
+          <h3>SCR-01 목적</h3>
+          <p>기존 "푸시 알림 발송 이력" 메뉴의 발송 타입 목록에 "관심지역 알림"을 추가해, 진입/이탈 PUSH 이력을 별도 화면 없이 조회</p>
+        </div>
+        <div class="scr-desc-block">
+          <h3>SCR-01 근거</h3>
+          <p>기능정의서_STAFF FT-01, PRD_STAFF LD-01(v1.1)·LD-05 — 신규 화면 없음. 실제 화면 캡처(<code>00_자료/STAFF 푸시 알림 발송 이력 메뉴.png</code>)의 필터·컬럼 구조를 그대로 재현하고, "푸시 발송 타입" 드롭다운·목록에 "관심지역 알림"(강조 표시)만 신규 추가함. 진입/이탈 구분은 "푸시 제목"·"푸시 내용" 텍스트로만 함.</p>
+        </div>
+        <div class="scr-desc-block" style="margin-top:14px;">
+          <h3>SCR-02 목적</h3>
+          <p>기존 "푸시알림 발송 이력" 메뉴에 신규 탭을 추가해 알림톡/SMS 발송 성공·실패 결과를 업체명·지점명 등 문맥 정보와 함께 조회</p>
+        </div>
+        <div class="scr-desc-block">
+          <h3>SCR-02 근거</h3>
+          <p>기능정의서_STAFF FT-02, PRD_STAFF LD-04 — 업체명·지점명·차량정보는 기존 메뉴 컬럼 스타일 재사용, 채널·발송 결과·실패 사유는 슈어엠 발송 내역 샘플(<code>00_자료/알림톡 발송 내역 by 슈어엠.xlsx</code>) 형식 근거로 신규 추가. 실패 사유 예시("K3020 · 알림톡 차단")는 이 샘플의 실제 실패 행 인용. [엑셀 다운로드] 버튼은 PRD_STAFF LD-01 근거로 신설(2026-09-11) — 전용 비용 집계 화면을 두지 않는 대신, 운영팀이 이 탭에서 필터·검색한 결과를 엑셀로 받아 직접 집계한다.</p>
+        </div>
+        <div class="annotation">해소됨(2026-09-11, §6 Q-10) — 슈어엠 공식 안내(surem.tistory.com/28)로 "슈어엠이 알림톡 실패 리턴값을 실시간 감지해 자동으로 SMS/LMS Fail-over 발송하며, 개발팀이 별도 재발송 로직을 구현할 필요가 없다"는 점이 확인됨. 샘플에서 "카카오 미사용자"(K3019)가 실패로만 기록된 것은 이 화면이 전환 이전 원본 알림톡 요청 로그를 보여준 것일 뿐, 자동 전환 자체가 없다는 의미는 아닌 것으로 정리함.</div>
+        <div class="annotation always">미결정 · 논의 중 — 전환 후 결과 레코드가 1건(전환 표시)인지 2건(원본 실패+SMS 성공 별도)인지 미확인 — 2건이면 "채널" 필드 판정·엑셀 다운로드 기반 비용 집계에서 중복 계산 위험(§6 Q-11, 경량 검토 — ax-dev-agent, 2026-09-11 신규)</div>
+        <div class="annotation always">미결정 · 논의 중 — 벤더 결과값 지연·누락 시 처리 방식(§6 Q-02)</div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>변경 이력</h2>
+    <p style="font-size:0.82em; color:var(--muted); margin-top:-8px;">이 표는 History의 요약입니다 — 상세 근거는 관련 History 링크 참조. <strong>[정책변경]</strong>=PRD Locked Decision 변경, <strong>[검토의견]</strong>=5인/경량 검토 반영. 표시 없으면 총괄 직접 요청.</p>
+    <table class="imas-table">
+      <tr><th>일자</th><th>변경 내용 (요약)</th><th>관련 History</th></tr>
+      <tr><td>2026-09-09</td><td>최초 생성 — SCR-01(어드민 집계, 전용 화면), SCR-02(알림톡·SMS 발송 이력 탭)</td><td>E-09</td></tr>
+      <tr><td>2026-09-09</td><td><strong>[정책변경]</strong> SCR-01을 "기존 메뉴 발송 타입 추가"로 교체, SCR-02 컬럼·필터 신규 정의</td><td>E-10</td></tr>
+      <tr><td>2026-09-09</td><td><strong>[검토의견]</strong> SCR-02 발송일자 필터를 SCR-01과 동일한 2필드로 수정</td><td>E-10</td></tr>
+      <tr><td>2026-09-10</td><td>전체화면 기준으로 사이드바를 전체 메뉴 그룹으로 확장</td><td>E-11</td></tr>
+      <tr><td>2026-09-10</td><td>SCR-01·SCR-02를 탭 전환 캔버스로 통합, mock 필터·2단 레이아웃 적용</td><td>E-12</td></tr>
+      <tr><td>2026-09-10</td><td>캡처 비율 불일치 정정 — 레이아웃 폭 확대(마크업 변경 없음)</td><td>E-13</td></tr>
+      <tr><td>2026-09-11</td><td>총괄 점검 요청에 따라 FMS 원장 의존 제거(E-16·17)와 맞춰 교차 참조만 정정</td><td>E-19</td></tr>
+      <tr><td>2026-09-11</td><td><strong>[정책변경]</strong> SCR-02에 엑셀 다운로드 버튼 신규 반영(PRD_STAFF LD-01이 이미 요구하던 기능, 기존엔 누락)</td><td>E-22</td></tr>
+      <tr><td>2026-09-11</td><td>Q-10 해소(슈어엠 자동전환 확인) 반영</td><td>E-22</td></tr>
+      <tr><td>2026-09-11</td><td><strong>[검토의견]</strong> 경량 검토(ax-dev-agent, 보류) — 전환 레코드 구조 미확인 지적, Q-11 신규 등록</td><td>E-22</td></tr>
+    </table>
+  </div>
+
+  <div class="legend">
+    <strong>범례</strong> — 파란 상자: PRD/기능정의서 근거 표시 · 노란 상자: 미결정 항목(항상 노출) · 초록 강조(new-field/new 클래스): 이번 갱신에서 신규 추가된 필터·컬럼·행 · 초록 상자: 클릭 가능한 인터랙션 안내 · 예시 데이터(업체명, 차량번호 등)는 자료(00_자료/*)에 등장하는 실 사례 값 또는 그 패턴을 인용한 것입니다. 이 화면은 신규 기능이라 AS-IS(현행) 비교 대상이 없어 TO-BE만 표시됩니다.
+    <br>디자인 시스템 참조: 실제 STAFF 화면 캡처(<code>00_자료/STAFF 푸시 알림 발송 이력 메뉴.png</code>)의 사이드바 전체 메뉴 그룹·필터·테이블 레이아웃을 재현했습니다. 색상 토큰은 커넥트 서비스의 기존 어드민 프로토타입(<code>커넥트/02_완료된_프로젝트/현장서비스_개선/Admin/현장서비스_어드민_개선안.html</code>)의 "IMAS Staff Design System"을 CSS 변수(<code>--imas-*</code>)로 근사 구현했습니다(총괄 확인, 2026-09-09).
+    <br>레이아웃: 2026-09-10부터 SCR-01·SCR-02는 좌(화면 캔버스)·우(목적/근거/미결정 설명) 2단 구조로 표현하며, 실제로 같은 메뉴의 탭 2개라는 점을 반영해 하나의 인터랙티브 캔버스(탭 클릭으로 전환)로 통합했습니다. 필터 인터랙션은 모두 기능정의서_STAFF §3에 이미 문서화된 컬럼·필터를 그대로 클릭으로 구현한 것이며, 이번 갱신으로 새로 결정된 기능은 없습니다.
+  </div>
+
+</main>
+
+<script>
+function setMode(mode) {
+  document.body.setAttribute('data-mode', mode);
+  document.getElementById('btn-tobe').classList.toggle('active', mode === 'tobe');
+  document.getElementById('btn-asis').classList.toggle('active', mode === 'asis');
+}
+
+function staffTab(tab) {
+  document.getElementById('staff-pane-scr01').style.display = tab === 'scr01' ? '' : 'none';
+  document.getElementById('staff-pane-scr02').style.display = tab === 'scr02' ? '' : 'none';
+  document.getElementById('staff-tab-scr01').classList.toggle('on', tab === 'scr01');
+  document.getElementById('staff-tab-scr02').classList.toggle('on', tab === 'scr02');
+}
+
+function staffFilterType(select) {
+  var val = select.value;
+  var anyVisible = false;
+  document.querySelectorAll('#staff-table-scr01 tr[data-row]').forEach(function (tr) {
+    var show = (val === '전체' || tr.dataset.type === val);
+    tr.style.display = show ? '' : 'none';
+    if (show) anyVisible = true;
+  });
+  document.getElementById('staff-scr01-empty').style.display = anyVisible ? 'none' : '';
+}
+
+function staffFilterScr02() {
+  var ch = document.getElementById('staff-f-channel').value;
+  var res = document.getElementById('staff-f-result').value;
+  var anyVisible = false;
+  document.querySelectorAll('#staff-table-scr02 tr[data-row]').forEach(function (tr) {
+    var okCh = (ch === '전체' || tr.dataset.channel === ch);
+    var okRes = (res === '전체' || tr.dataset.result === res);
+    var show = okCh && okRes;
+    tr.style.display = show ? '' : 'none';
+    if (show) anyVisible = true;
+  });
+  document.getElementById('staff-scr02-empty').style.display = anyVisible ? 'none' : '';
+}
+
+function staffPage(el) {
+  el.parentElement.querySelectorAll('span').forEach(function (s) { s.classList.remove('on'); });
+  el.classList.add('on');
+}
+function staffMockDownload() {
+  var msg = document.getElementById('staff-download-msg');
+  msg.style.display = 'inline';
+  setTimeout(function () { msg.style.display = 'none'; }, 2500);
+}
+</script>
+
+</body>
+</html>

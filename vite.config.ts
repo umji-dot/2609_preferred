@@ -3,22 +3,15 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
-  base: '/2609_preferred/',
-
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/design-connect-staff/' : '/',
   plugins: [react(), tailwindcss()],
-
-  build: {
-    outDir: 'docs',
-  },
-
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
     },
   },
-
   server: {
-    port: 5174,
+    port: 5175,
   },
-});
+}));

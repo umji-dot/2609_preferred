@@ -1,0 +1,2764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FMS 어드민 — 차스펙관리/차량관리 구조개선 프로토타입 v2.0 (2026-07-16 260715 v2.8 반영: 메뉴명 변경·테이블 재편·imsform 캐스케이드 확대·BR-34/35 신규)</title>
+<style>
+  /* ===== 기본 리셋 & 변수 ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1e4799;
+    --blue-light: #2f5fc4;
+    --blue-pale: #eef2ff;
+    --gray-1: #f5f6fa;
+    --gray-2: #e9ebf0;
+    --gray-3: #c8ccd8;
+    --gray-4: #9198ad;
+    --gray-5: #5a6275;
+    --gray-6: #2d3142;
+    --green: #1a9e5a;
+    --red: #d93025;
+    --orange: #e67e22;
+    --shadow: 0 2px 8px rgba(0,0,0,.10);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,.14);
+    --radius: 6px;
+    --font: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  }
+  body { font-family: var(--font); font-size: 14px; color: var(--gray-6); background: var(--gray-1); }
+
+  /* ===== GNB ===== */
+  .gnb { height: 52px; background: var(--blue); display: flex; align-items: center; padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .gnb-logo { color: #fff; font-size: 18px; font-weight: 700; letter-spacing: -.5px; }
+  .gnb-badge { background: rgba(255,255,255,.15); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .gnb-spacer { flex: 1; }
+  .gnb-user { color: rgba(255,255,255,.8); font-size: 13px; }
+
+  /* ===== 레이아웃 ===== */
+  .layout { display: flex; min-height: calc(100vh - 52px); }
+
+  /* ===== LNB ===== */
+  .lnb { width: 220px; background: #fff; border-right: 1px solid var(--gray-2); padding: 16px 0; flex-shrink: 0; }
+  .lnb-group-title { font-size: 11px; font-weight: 700; color: var(--gray-4); padding: 8px 16px 4px; text-transform: uppercase; letter-spacing: .5px; }
+  .lnb-item { display: flex; align-items: center; gap: 8px; padding: 9px 16px; cursor: pointer; color: var(--gray-5); font-size: 13.5px; transition: all .15s; border-left: 3px solid transparent; }
+  .lnb-item:hover { background: var(--gray-1); color: var(--blue); }
+  .lnb-item.active { background: var(--blue-pale); color: var(--blue); font-weight: 600; border-left-color: var(--blue); }
+  .lnb-icon { width: 16px; text-align: center; font-size: 14px; }
+
+  /* ===== 메인 콘텐츠 ===== */
+  .main { flex: 1; padding: 24px; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== 페이지 헤더 ===== */
+  .page-header { margin-bottom: 20px; }
+  .page-title { font-size: 20px; font-weight: 700; color: var(--gray-6); }
+  .page-sub { font-size: 13px; color: var(--gray-4); margin-top: 4px; }
+
+  /* ===== 카드 ===== */
+  .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+  /* ===== 필터 바 ===== */
+  .filter-bar { padding: 16px 20px; border-bottom: 1px solid var(--gray-2); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .filter-bar select, .filter-bar input[type=text] {
+    height: 34px; border: 1px solid var(--gray-3); border-radius: var(--radius);
+    padding: 0 10px; font-size: 13px; color: var(--gray-6); outline: none;
+    transition: border-color .15s;
+  }
+  .filter-bar select:focus, .filter-bar input[type=text]:focus { border-color: var(--blue); }
+  .filter-bar .spacer { flex: 1; }
+
+  /* ===== 버튼 ===== */
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: var(--blue-light); }
+  .btn-outline { background: #fff; color: var(--gray-5); border: 1px solid var(--gray-3); }
+  .btn-outline:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+  .btn-danger { background: #fff; color: var(--red); border: 1px solid var(--red); }
+  .btn-danger:hover { background: #fff5f5; }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+
+  /* ===== 테이블 ===== */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--gray-1); color: var(--gray-5); font-weight: 600; padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--gray-2); white-space: nowrap; }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--gray-2); vertical-align: middle; }
+  tbody tr:hover { background: #fafbff; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ===== 배지 ===== */
+  .badge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-blue { background: var(--blue-pale); color: var(--blue); }
+  .badge-green { background: #e8f8ef; color: var(--green); }
+  .badge-gray { background: var(--gray-2); color: var(--gray-4); }
+  .badge-orange { background: #fef3e2; color: var(--orange); }
+
+  /* ===== 모달 오버레이 ===== */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+
+  /* ===== 모달 ===== */
+  .modal { background: #fff; border-radius: 8px; box-shadow: var(--shadow-lg); width: 620px; max-height: 90vh; display: flex; flex-direction: column; }
+  .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--gray-2); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close { width: 28px; height: 28px; border: none; background: none; cursor: pointer; font-size: 20px; color: var(--gray-4); display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .modal-close:hover { background: var(--gray-2); color: var(--gray-6); }
+  .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--gray-2); display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ===== 폼 ===== */
+  .form-section { margin-bottom: 20px; }
+  .form-section-title { font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .5px; padding-bottom: 8px; border-bottom: 1px solid var(--blue-pale); margin-bottom: 14px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-field.span2 { grid-column: span 2; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--gray-5); display: flex; align-items: center; gap: 4px; }
+  .form-label .req { color: var(--red); }
+  .form-input, .form-select {
+    height: 36px; border: 1px solid var(--gray-3); border-radius: var(--radius);
+    padding: 0 10px; font-size: 13px; color: var(--gray-6); outline: none;
+    transition: border-color .15s; background: #fff; width: 100%;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(30,71,153,.08); }
+  .form-input:disabled, .form-select:disabled { background: var(--gray-1); color: var(--gray-4); cursor: not-allowed; }
+  .form-hint { font-size: 11px; color: var(--gray-4); }
+  .form-hint.warning { color: var(--orange); }
+
+  /* ===== 국산/수입 토글 ===== */
+  .origin-toggle { display: flex; gap: 0; border: 1px solid var(--gray-3); border-radius: var(--radius); overflow: hidden; }
+  .origin-toggle label { flex: 1; display: flex; align-items: center; justify-content: center; height: 36px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--gray-5); transition: all .15s; }
+  .origin-toggle input[type=radio] { display: none; }
+  .origin-toggle input[type=radio]:checked + label { background: var(--blue); color: #fff; }
+  .origin-toggle label:hover:not(:has(input:checked)) { background: var(--gray-1); }
+
+  /* ===== 연동 안내 배너 ===== */
+  .db-banner { display: flex; align-items: center; gap: 10px; background: var(--blue-pale); border: 1px solid #c7d4f0; border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; font-size: 12.5px; color: var(--blue); }
+  .db-banner-icon { font-size: 16px; }
+
+  /* ===== 차량 등록 Path A/B/C ===== */
+  .modal-lg { width: 700px; }
+  .path-selector { display: flex; gap: 10px; margin-bottom: 0; }
+  .path-card { flex: 1; border: 2px solid var(--gray-2); border-radius: var(--radius); padding: 12px 14px; cursor: pointer; transition: all .15s; }
+  .path-card input[type=radio] { display: none; }
+  .path-card.selected { border-color: var(--blue); background: var(--blue-pale); }
+  .path-card-title { font-size: 13px; font-weight: 700; color: var(--gray-6); margin-bottom: 4px; }
+  .path-card.selected .path-card-title { color: var(--blue); }
+  .path-card-desc { font-size: 11.5px; color: var(--gray-4); line-height: 1.4; }
+  .badge-rec { background: var(--blue); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; vertical-align: middle; }
+  .dropzone { border: 2px dashed var(--gray-3); border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; transition: all .15s; background: var(--gray-1); }
+  .dropzone:hover { border-color: var(--blue); background: var(--blue-pale); }
+  .ocr-step { font-size: 13px; color: var(--gray-5); margin-bottom: 4px; }
+  .ocr-step.active { color: var(--blue); font-weight: 600; }
+  .ocr-progress { background: var(--gray-2); height: 4px; border-radius: 2px; overflow: hidden; margin-top: 10px; }
+  .info-banner { padding: 10px 14px; border-radius: var(--radius); font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .info-banner-blue { background: var(--blue-pale); border: 1px solid #c7d4f0; color: var(--blue); }
+  .info-banner-orange { background: #fef3e2; border: 1px solid #f5c97a; color: #7d4e00; }
+  .form-input.autofill, .form-select.autofill { background: #eef6ff; border-color: #7baae8; }
+  .form-input.req-field { border-color: var(--red); }
+  .badge-verified { background: #e8f8ef; color: var(--green); }
+  .badge-unverified { background: var(--gray-2); color: var(--gray-5); }
+  .radio-group { display: flex; align-items: center; height: 36px; gap: 16px; }
+  .radio-group label { cursor: pointer; font-size: 13px; color: var(--gray-6); display: flex; align-items: center; gap: 5px; }
+  /* ===== 토스트 ===== */
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--gray-6); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  /* ===== 페이지네이션 ===== */
+  .pagination { padding: 14px 20px; border-top: 1px solid var(--gray-2); display: flex; align-items: center; justify-content: space-between; }
+  .page-info { font-size: 12px; color: var(--gray-4); }
+  .page-btns { display: flex; gap: 4px; }
+  .page-btn { width: 30px; height: 30px; border: 1px solid var(--gray-3); border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: var(--gray-5); display: flex; align-items: center; justify-content: center; }
+  .page-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .page-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
+
+  /* ===== 상태 점 ===== */
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+  .dot-green { background: var(--green); }
+  .dot-gray { background: var(--gray-3); }
+
+  /* ===== 레거시 경고 ===== */
+  .legacy-warn { font-size: 11px; color: var(--orange); display: flex; align-items: center; gap: 4px; margin-top: 3px; }
+
+  /* ===== 차량 등록 3-column 모달 ===== */
+  .modal-xl { width: min(1700px, 92vw); max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+  .reg-cols { display: grid; grid-template-columns: 300px 1fr minmax(420px, 560px); overflow: hidden; flex: 1; }
+  .reg-left { padding: 18px 16px; border-right: 1px solid var(--gray-2); overflow-y: auto; max-height: 74vh; }
+  .reg-mid { padding: 18px 20px; overflow-y: auto; max-height: 74vh; }
+  .reg-preview { background: var(--gray-1); border-left: 1px solid var(--gray-2); padding: 16px; display: flex; flex-direction: column; max-height: 74vh; }
+  .reg-step-hd { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  .reg-step-num { width: 22px; height: 22px; background: var(--blue); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .reg-step-title { font-size: 13px; font-weight: 700; color: var(--gray-6); }
+  .reg-step-sub { font-size: 11px; color: var(--gray-4); margin-top: 2px; }
+  .path-tabs { display: flex; border: 1px solid var(--gray-3); border-radius: var(--radius); overflow: hidden; margin-bottom: 14px; }
+  .path-tab { flex: 1; padding: 8px 4px; text-align: center; cursor: pointer; font-size: 11.5px; font-weight: 500; color: var(--gray-5); background: #fff; transition: all .15s; border-right: 1px solid var(--gray-3); position: relative; line-height: 1.4; }
+  .path-tab:last-child { border-right: none; }
+  .path-tab.active { background: var(--blue); color: #fff; }
+  .path-tab:hover:not(.active) { background: var(--gray-1); }
+  .pt-rec { position: absolute; top: 0; right: 0; background: var(--green); color: #fff; font-size: 8.5px; padding: 1px 4px; border-radius: 0 0 0 4px; }
+  .qbox { background: #fff; border: 1px solid var(--gray-2); border-radius: var(--radius); padding: 12px 14px; }
+  .qrow { display: flex; gap: 8px; align-items: flex-end; }
+  .fg { margin-bottom: 10px; }
+  .fg:last-child { margin-bottom: 0; }
+  .flabel { font-size: 12px; font-weight: 600; color: var(--gray-5); display: block; margin-bottom: 4px; }
+  .flabel .req { color: var(--red); }
+  .flist-v { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .fitem-v { border: 1px solid var(--gray-2); border-radius: var(--radius); padding: 8px 10px; background: #fff; }
+  .fitem-vrow { display: flex; align-items: center; gap: 8px; }
+  .fitem-vicon { font-size: 14px; flex-shrink: 0; }
+  .fitem-vbody { flex: 1; min-width: 0; }
+  .fitem-vname { font-weight: 600; color: var(--gray-6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  .fitem-vstatus { color: var(--gray-4); font-size: 11px; margin-top: 2px; }
+  .fitem-vprog { height: 3px; background: var(--gray-2); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .fitem-vprog-bar { height: 100%; background: var(--blue); border-radius: 2px; transition: width .2s; }
+  .fitem-vbadge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
+  .fvb-verified { background: #e8f8ef; color: var(--green); }
+  .fvb-unverified { background: var(--gray-2); color: var(--gray-5); }
+  .fvb-ocrdone { background: #fef9c3; color: #854d0e; }
+  .reg-auth-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--gray-1); border-radius: var(--radius); margin-bottom: 16px; }
+  .reg-auth-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .rab-verified { background: #e8f8ef; color: var(--green); }
+  .rab-unverified { background: var(--gray-2); color: var(--gray-5); }
+  .rab-pending { background: #fef3e2; color: var(--orange); }
+  .reg-auth-desc { font-size: 11.5px; color: var(--gray-5); }
+  .reg-banner { padding: 10px 14px; border-radius: var(--radius); font-size: 12px; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; line-height: 1.5; }
+  .reg-banner-warn { background: #fef3e2; border: 1px solid #f5c97a; color: #7d4e00; }
+  .reg-banner-info { background: var(--blue-pale); border: 1px solid #c7d4f0; color: var(--blue); }
+  .reg-banner-success { background: #e8f8ef; border: 1px solid #86efac; color: #166534; }
+  .reg-preview-hd { font-size: 12px; font-weight: 700; color: var(--gray-5); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-shrink: 0; }
+  .reg-preview-bd { flex: 1; border: 1px solid var(--gray-2); border-radius: var(--radius); background: #fff; display: flex; align-items: center; justify-content: center; overflow-y: auto; position: relative; min-height: 300px; }
+  .reg-preview-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--gray-4); text-align: center; font-size: 11.5px; padding: 24px; }
+  .reg-preview-empty .picon { font-size: 28px; }
+  .reg-preview-proc { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--gray-4); font-size: 12px; padding: 24px; }
+  .mock-doc { width: 100%; font-size: 12px; align-self: flex-start; }
+  .mock-doc-hdr { background: #163460; color: #fff; text-align: center; font-size: 15px; font-weight: 700; padding: 12px 12px; letter-spacing: .5px; }
+  .mock-doc-sub { background: #1e4799; color: rgba(255,255,255,.85); text-align: center; font-size: 11px; padding: 5px; }
+  .mock-doc-body { padding: 6px 10px; }
+  .mock-doc-row { display: grid; grid-template-columns: 88px 1fr; border-bottom: 1px solid #e5e7eb; }
+  .mock-doc-row:last-child { border-bottom: none; }
+  .mock-doc-th { background: #f3f4f6; padding: 7px 8px; font-weight: 600; color: #374151; font-size: 12px; }
+  .mock-doc-td { padding: 7px 8px; color: #111827; font-size: 12px; }
+  .mock-doc-footer { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; }
+  .mock-doc-stamp { width: 36px; height: 36px; border: 2px solid #c53030; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #c53030; font-weight: 700; text-align: center; line-height: 1.2; flex-shrink: 0; }
+  /* Lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 9999; display: none; align-items: center; justify-content: center; }
+  .lightbox.open { display: flex; }
+  .lightbox-inner { position: relative; background: #fff; border-radius: 6px; overflow: hidden; max-width: 460px; width: 90vw; }
+  .lightbox-close { position: absolute; top: -12px; right: -12px; width: 28px; height: 28px; border-radius: 50%; background: #fff; border: none; cursor: pointer; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  /* Spinner */
+  @keyframes reg-spin { to { transform: rotate(360deg); } }
+  .reg-spin { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--gray-3); border-top-color: var(--blue); border-radius: 50%; animation: reg-spin .8s linear infinite; vertical-align: middle; margin-right: 4px; }
+  /* Divider & optional section */
+  .reg-sec-div { border-top: 1px solid var(--gray-2); margin: 16px 0; }
+  .opt-section { background: var(--gray-1); border-radius: var(--radius); padding: 12px 14px; }
+  .opt-section-title { font-size: 11px; font-weight: 700; color: var(--gray-4); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<!-- GNB -->
+<header class="gnb">
+  <span class="gnb-logo">FMS Admin</span>
+  <span class="gnb-badge">IMAS</span>
+  <span class="gnb-spacer"></span>
+  <span class="gnb-user">SYS_ADMIN · 관리자</span>
+</header>
+
+<div class="layout">
+
+  <!-- LNB -->
+  <nav class="lnb">
+    <div class="lnb-group-title">차량관리</div>
+    <div class="lnb-item active" onclick="showPage('carspec')">
+      <span class="lnb-icon">🔧</span> 카코드 관리
+    </div>
+    <div class="lnb-item" onclick="showPage('carmgmt')">
+      <span class="lnb-icon">🚗</span> 차량 관리
+    </div>
+    <div class="lnb-group-title" style="margin-top:12px">현장서비스</div>
+    <div class="lnb-item">
+      <span class="lnb-icon">🔩</span> 현장서비스
+    </div>
+    <div class="lnb-group-title" style="margin-top:12px">시스템</div>
+    <div class="lnb-item">
+      <span class="lnb-icon">⚙️</span> 설정
+    </div>
+  </nav>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="main">
+
+    <!-- ===== 차스펙관리 페이지 ===== -->
+    <section id="page-carspec" class="page active">
+      <div class="page-header">
+        <div class="page-title">카코드 관리</div>
+        <div class="page-sub">카코드 등록 · 수정 · 삭제 전담 화면 (260715: '차스펙관리'에서 명칭 변경)</div>
+      </div>
+
+      <div class="card">
+        <!-- 필터 바 -->
+        <div class="filter-bar">
+          <select style="width:120px">
+            <option value="">제조사 전체</option>
+            <option>현대</option><option>기아</option><option>제네시스</option>
+            <option>벤츠</option><option>BMW</option><option>아우디</option>
+          </select>
+          <select style="width:120px">
+            <option value="">모델명 전체</option>
+          </select>
+          <select style="width:100px">
+            <option value="">연식 전체</option>
+            <option>2024</option><option>2023</option><option>2022</option>
+            <option>2021</option><option>2020</option>
+          </select>
+          <input type="text" placeholder="카코드 검색" style="width:200px">
+          <button class="btn btn-primary btn-sm">조회</button>
+          <span class="spacer"></span>
+          <button class="btn btn-outline" onclick="showToast('카코드 정보를 엑셀로 다운로드합니다.')">📥 엑셀 다운로드</button>
+          <button class="btn btn-outline" onclick="openModal('modal-carcode-reg')">
+            ＋ 카코드 등록
+          </button>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-wrap">
+          <table>
+            <!-- 카코드 관리 테이블 v2.0(260715): 카코드 링크화·첫컬럼 이동, ID·차량이미지·상세보기 제거 (BR-16) -->
+            <thead>
+              <tr>
+                <th>카코드</th>
+                <th>제조사</th>
+                <th>모델명</th>
+                <th>하위모델명</th>
+                <th>연식</th>
+                <th>유종</th>
+                <th>배기량</th>
+                <th>길이(mm)</th>
+                <th>리버스<br><span style="font-size:10px; font-weight:400; color:var(--gray-4);">fbp 자동</span></th>
+                <th>버전</th>
+                <th>차량 수</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><a href="#" class="code-link" onclick="openModal('modal-carcode-edit'); return false;" style="color:var(--blue); font-weight:600;">HY-IONIQ6-2024</a></td>
+                <td>현대</td>
+                <td>아이오닉 6</td>
+                <td>스탠다드 롱레인지</td>
+                <td>2024</td>
+                <td>전기</td>
+                <td>—</td>
+                <td>4,855</td>
+                <td><span class="badge badge-gray" style="font-size:11px;">X</span></td>
+                <td><span style="color:var(--gray-4); font-size:12px;">—</span></td>
+                <td><a href="#" onclick="showPage('carmgmt'); return false;" style="color:var(--blue); font-weight:600;">3대</a></td>
+              </tr>
+              <tr>
+                <td><a href="#" class="code-link" onclick="openModal('modal-carcode-edit'); return false;" style="color:var(--blue); font-weight:600;">HY-PALI-2023</a></td>
+                <td>현대</td>
+                <td>팰리세이드</td>
+                <td>디젤 캘리그래피</td>
+                <td>2023</td>
+                <td>경유</td>
+                <td>2,199cc</td>
+                <td>4,995</td>
+                <td><span class="badge badge-green" style="font-size:11px;">O</span></td>
+                <td><span class="badge badge-gray" style="font-size:11px;">v1.2.3</span></td>
+                <td><a href="#" onclick="showPage('carmgmt'); return false;" style="color:var(--blue); font-weight:600;">7대</a></td>
+              </tr>
+              <tr>
+                <td><a href="#" class="code-link" onclick="openModal('modal-carcode-edit'); return false;" style="color:var(--blue); font-weight:600;">BMW-5SER-2023</a></td>
+                <td>BMW</td>
+                <td>5시리즈</td>
+                <td>520d xDrive</td>
+                <td>2023</td>
+                <td>경유</td>
+                <td>1,995cc</td>
+                <td>4,963</td>
+                <td><span class="badge badge-gray" style="font-size:11px;">X</span></td>
+                <td><span style="color:var(--gray-4); font-size:12px;">—</span></td>
+                <td><a href="#" onclick="showPage('carmgmt'); return false;" style="color:var(--blue); font-weight:600;">2대</a></td>
+              </tr>
+              <tr>
+                <td><a href="#" class="code-link" onclick="openModal('modal-carcode-edit'); return false;" style="color:var(--blue); font-weight:600;">HY-SONATA-2022</a></td>
+                <td>현대</td>
+                <td>쏘나타</td>
+                <td>2.0 스마트</td>
+                <td>2022</td>
+                <td>휘발유</td>
+                <td>1,999cc</td>
+                <td>4,900</td>
+                <td><span class="badge badge-green" style="font-size:11px;">O</span></td>
+                <td><span class="badge badge-gray" style="font-size:11px;">v2.0.1</span></td>
+                <td><a href="#" onclick="showPage('carmgmt'); return false;" style="color:var(--blue); font-weight:600;">12대</a></td>
+              </tr>
+              <tr>
+                <td><a href="#" class="code-link" onclick="openModal('modal-carcode-edit'); return false;" style="color:var(--blue); font-weight:600;">HY-GRAN-2022</a></td>
+                <td>현대</td>
+                <td>그랜저</td>
+                <td>하이브리드 프리미엄</td>
+                <td>2022</td>
+                <td>하이브리드(휘발유+전기)</td>
+                <td>2,497cc</td>
+                <td>4,990</td>
+                <td><span class="badge badge-green" style="font-size:11px;">O</span></td>
+                <td><span class="badge badge-gray" style="font-size:11px;">v1.5.0</span></td>
+                <td><a href="#" onclick="showPage('carmgmt'); return false;" style="color:var(--blue); font-weight:600;">5대</a></td>
+              </tr>
+              <tr>
+                <td><a href="#" class="code-link" onclick="openModal('modal-carcode-edit'); return false;" style="color:var(--blue); font-weight:600;">KIA-CARNI-2023</a></td>
+                <td>기아</td>
+                <td>카니발</td>
+                <td>9인승 노블레스</td>
+                <td>2023</td>
+                <td>경유</td>
+                <td>2,199cc</td>
+                <td>5,155</td>
+                <td><span class="badge badge-gray" style="font-size:11px;">X</span></td>
+                <td><span style="color:var(--gray-4); font-size:12px;">—</span></td>
+                <td><a href="#" onclick="showPage('carmgmt'); return false;" style="color:var(--blue); font-weight:600;">4대</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span class="page-info">총 248개 카코드</span>
+          <div class="page-btns">
+            <button class="page-btn">‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 차량관리 페이지 ===== -->
+    <section id="page-carmgmt" class="page">
+      <div class="page-header">
+        <div class="page-title">차량 관리</div>
+        <div class="page-sub">차량 등록 · 수정 · 삭제 단일 진입점</div>
+      </div>
+
+      <div class="card">
+        <!-- 차량관리 필터 v0.6: 카코드 선택 여부·등록증 여부 필터 추가 ([변경-10]) -->
+        <div class="filter-bar">
+          <select style="width:120px"><option value="">리셀러 전체</option><option>리셀러A</option></select>
+          <select style="width:120px"><option value="">업체 전체</option><option>IMS모빌리티</option></select>
+          <select style="width:120px"><option value="">지점 전체</option><option>서울지점</option></select>
+          <select style="width:140px"><option value="">단말기 장착여부</option><option>장착</option><option>미장착</option></select>
+          <select style="width:140px" id="filter-carcode-yn">
+            <option value="">카코드 전체</option>
+            <option value="Y">카코드 있음</option>
+            <option value="N">카코드 없음</option>
+          </select>
+          <select style="width:160px" id="filter-regdoc-yn">
+            <option value="">등록증 전체</option>
+            <option value="Y">등록증 있음</option>
+            <option value="N">등록증 없음</option>
+          </select>
+          <!-- [신규 v1.2] 차량상태 필터 — P-07 재검토 후 복원 -->
+          <select style="width:130px" id="filter-vehicle-status">
+            <option value="">차량상태 전체</option>
+            <option value="운영">운영</option>
+            <option value="매각">매각</option>
+          </select>
+          <input type="text" placeholder="차량번호 / 단말기번호 / 카코드" style="width:200px">
+          <button class="btn btn-primary btn-sm" onclick="applyCarFilter()">조회</button>
+          <span class="spacer"></span>
+          <button class="btn btn-outline">📥 엑셀 다운로드</button>
+          <button class="btn btn-primary" onclick="openModal('modal-car-reg')">＋ 차량 등록</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <!-- 차량관리 테이블 v2.0(260715): 차량이미지 신규(카코드 관리에서 이관), 디지털 차키 여부·상세보기 제거, 차대번호 링크화, 유종→연료종류·차량등록증 여부→차량등록증 등록 여부 명칭변경 (BR-13) -->
+            <thead>
+              <tr>
+                <th><input type="checkbox"></th>
+                <th>ID</th>
+                <th>차량이미지</th>
+                <th>리셀러</th>
+                <th>업체명</th>
+                <th>지점명</th>
+                <th>차대번호</th>
+                <th>차량번호</th>
+                <th>연식</th>
+                <th>제조사</th>
+                <th>모델명</th>
+                <th>하위모델명</th>
+                <th>단말기 기종</th>
+                <th>단말기 SN</th>
+                <th>연료종류</th>
+                <th>주행거리</th>
+                <th>통신모드</th>
+                <th>최초 설치일</th>
+                <th>최근 설치일</th>
+                <th>탈거일</th>
+                <th>카코드</th>
+                <th>차량등록증 등록 여부</th>
+                <th>차량상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td>5001</td>
+                <td><div style="width:40px;height:30px;background:var(--gray-2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px">🚗</div></td>
+                <td>리셀러A</td>
+                <td>IMS모빌리티</td>
+                <td>서울지점</td>
+                <td style="font-family:monospace; font-size:11px;"><a href="#" onclick="openCarEditModal(); return false;" style="color:var(--blue); font-weight:600;">KMHGN41GP8A123456</a></td>
+                <td>123가4567</td>
+                <td>2024</td>
+                <td>현대</td>
+                <td>아이오닉 6</td>
+                <td>스탠다드 롱레인지</td>
+                <td style="font-size:12px;">FMS-T100</td>
+                <td style="font-family:monospace; font-size:11px;">SN-20240001</td>
+                <td><span class="badge badge-green">전기</span></td>
+                <td style="font-size:12px;">12,450km</td>
+                <td>OBD</td>
+                <td style="font-size:12px;">2024-03-20</td>
+                <td style="font-size:12px;">2024-03-20</td>
+                <td style="color:var(--gray-4); font-size:12px;">—</td>
+                <td><span class="badge badge-blue" style="font-size:11px;">HY-IONIQ6-2024</span></td>
+                <td><span class="badge badge-green" style="font-size:11px;">✓ VERIFIED</span></td>
+                <td><span class="badge badge-green">운영</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td>5002</td>
+                <td><div style="width:40px;height:30px;background:var(--gray-2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px">🚙</div></td>
+                <td>리셀러B</td>
+                <td>IMS모빌리티</td>
+                <td>부산지점</td>
+                <td style="font-family:monospace; font-size:11px;"><a href="#" onclick="openCarEditModal(); return false;" style="color:var(--blue); font-weight:600;">KMHC241BBPA456789</a></td>
+                <td>456나7890</td>
+                <td>2023</td>
+                <td>현대</td>
+                <td>팰리세이드</td>
+                <td>디젤 캘리그래피</td>
+                <td style="font-size:12px;">FMS-T200</td>
+                <td style="font-family:monospace; font-size:11px;">SN-20230045</td>
+                <td><span class="badge badge-blue">경유</span></td>
+                <td style="font-size:12px;">45,200km</td>
+                <td>OBD</td>
+                <td style="font-size:12px;">2023-06-15</td>
+                <td style="font-size:12px;">2024-01-10</td>
+                <td style="font-size:12px;">2024-11-20</td>
+                <td><span style="color:var(--gray-4); font-size:12px;">—</span></td>
+                <td><span class="badge badge-gray" style="font-size:11px;">UNVERIFIED</span></td>
+                <td><span class="badge badge-gray">매각</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td>5003</td>
+                <td><div style="width:40px;height:30px;background:var(--gray-2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px">🚘</div></td>
+                <td>리셀러A</td>
+                <td>ABC렌터카</td>
+                <td>인천지점</td>
+                <td style="font-family:monospace; font-size:11px;"><a href="#" onclick="openCarEditModal(); return false;" style="color:var(--blue); font-weight:600;">WBA5X9C03LAB78901</a></td>
+                <td>789다0123</td>
+                <td>2023</td>
+                <td>BMW</td>
+                <td>5시리즈</td>
+                <td>520d xDrive</td>
+                <td style="font-size:12px;">FMS-T100</td>
+                <td style="font-family:monospace; font-size:11px;">SN-20240088</td>
+                <td><span class="badge badge-blue">경유</span></td>
+                <td style="font-size:12px;">8,910km</td>
+                <td>NonOBD</td>
+                <td style="font-size:12px;">2024-02-05</td>
+                <td style="font-size:12px;">2024-02-05</td>
+                <td style="color:var(--gray-4); font-size:12px;">—</td>
+                <td><span class="badge badge-blue" style="font-size:11px;">BMW-5SER-2023</span></td>
+                <td><span style="color:var(--gray-4); font-size:12px;">—</span></td>
+                <td><span class="badge badge-green">운영</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- 검색된 차량 수 표시 ([변경-14]) -->
+        <div class="pagination">
+          <span class="page-info" id="car-count-info">총 1,284대 <span id="car-search-count" style="color:var(--blue); font-weight:600;"></span></span>
+          <div class="page-btns">
+            <button class="page-btn">‹</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== 카코드 등록 모달 ===== -->
+<div id="modal-carcode-reg" class="overlay" onclick="closeOverlay(event, this)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">카코드 등록</span>
+      <button class="modal-close" onclick="closeModal('modal-carcode-reg')">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="db-banner">
+        <span class="db-banner-icon">🔗</span>
+        제조사·모델명은 <strong>imsform 차량 카테고리 DB</strong> 기반으로 선택합니다. 목록에 없는 브랜드/모델은 DB 업데이트 후 등록 가능합니다.
+      </div>
+
+      <!-- 차량 식별 정보 -->
+      <div class="form-section">
+        <div class="form-section-title">차량 식별 정보</div>
+        <div class="form-grid">
+
+          <!-- 국산/수입 구분 -->
+          <div class="form-field span2">
+            <div class="form-label">국산 / 수입 구분 <span class="req">*</span></div>
+            <div class="origin-toggle">
+              <input type="radio" name="reg-origin" id="reg-origin-d" value="domestic" onchange="updateBrandList('reg')">
+              <label for="reg-origin-d">🇰🇷 국산차</label>
+              <input type="radio" name="reg-origin" id="reg-origin-i" value="import" onchange="updateBrandList('reg')">
+              <label for="reg-origin-i">🌍 수입차</label>
+            </div>
+          </div>
+
+          <!-- 제조사 -->
+          <div class="form-field">
+            <div class="form-label">제조사 <span class="req">*</span></div>
+            <select id="reg-brand" class="form-select" onchange="updateModelList('reg')" disabled>
+              <option value="">국산/수입 먼저 선택하세요</option>
+            </select>
+          </div>
+
+          <!-- 모델명 -->
+          <div class="form-field">
+            <div class="form-label">모델명 <span class="req">*</span></div>
+            <select id="reg-model" class="form-select" disabled>
+              <option value="">제조사를 먼저 선택하세요</option>
+            </select>
+          </div>
+
+          <!-- fbp 파일 업로드 (260609 신규) -->
+          <div class="form-field span2">
+            <div class="form-label">카코드 파일(fbp) <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+            <input type="file" accept=".fbp" id="reg-fbp-file" class="form-input" style="padding:5px;" onchange="simulateFbpUpload('reg')">
+            <div class="form-hint">업로드 시 카코드·버전이 자동입력됩니다</div>
+          </div>
+
+          <!-- 카코드 -->
+          <div class="form-field">
+            <div class="form-label">카코드 <span class="req">*</span></div>
+            <input type="text" class="form-input" id="reg-carcode-val" placeholder="예: HY-SONATA-2024">
+            <div class="form-hint">고유값. 중복 등록 불가. fbp 업로드 시 자동입력.</div>
+          </div>
+
+          <!-- 버전 (260609 신규) -->
+          <div class="form-field">
+            <div class="form-label">버전 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+            <input type="text" class="form-input" id="reg-version-val" placeholder="fbp 업로드 시 자동입력 (직접 입력 가능)">
+          </div>
+
+          <!-- 연식 — YYYY 직접입력 (260609 확정, BR-28) -->
+          <div class="form-field">
+            <div class="form-label">연식 <span class="req">*</span></div>
+            <input type="number" class="form-input" id="reg-model-year" placeholder="예: 2024" min="1990" max="2035">
+            <div class="form-hint">YYYY 숫자 직접입력 (260609 확정)</div>
+          </div>
+
+          <!-- 하위모델명 (v1.8: 필수로 변경 — 변경-S) -->
+          <div class="form-field span2">
+            <div class="form-label">하위모델명 <span class="req">*</span></div>
+            <input type="text" class="form-input" placeholder="예: 2.0 스마트">
+          </div>
+        </div>
+      </div>
+
+      <!-- 차량 상세 정보 — v1.8: 유종 필수, 길이·배기량·단종연도 필수(변경-S) -->
+      <div class="form-section">
+        <div class="form-section-title">차량 상세 정보</div>
+        <div class="form-grid">
+
+          <!-- 유종 — 필수 -->
+          <div class="form-field">
+            <div class="form-label">유종 <span class="req">*</span></div>
+            <select class="form-select" required>
+              <option value="">선택</option>
+              <option>경유</option>
+              <option>휘발유</option>
+              <option>휘발유(무연)</option>
+              <option>LPG</option>
+              <option>전기</option>
+              <option>하이브리드(경유+전기)</option>
+              <option>하이브리드(휘발유+전기)</option>
+            </select>
+          </div>
+
+          <!-- 배기량 — v1.8: 필수(변경-S) -->
+          <div class="form-field">
+            <div class="form-label">배기량 (cc) <span class="req">*</span></div>
+            <input type="text" class="form-input" placeholder="예: 1999  (전기차: 0 입력)">
+          </div>
+
+          <!-- 전체길이 — v1.8: 필수 복원(변경-S) -->
+          <div class="form-field">
+            <div class="form-label">전체길이 (mm) <span class="req">*</span></div>
+            <input type="text" class="form-input" placeholder="예: 4900">
+          </div>
+
+          <!-- 단종연도 — v1.8: 필수(변경-S) -->
+          <div class="form-field">
+            <div class="form-label">단종연도 <span class="req">*</span></div>
+            <input type="text" class="form-input" placeholder="예: 2026  (현역 모델: 9999)">
+          </div>
+
+        </div>
+      </div>
+      <!-- 리버스 안내 (읽기 전용, fbp 자동 감지, BR-27) -->
+      <div class="info-banner info-banner-blue" style="font-size:12px;">
+        ℹ️ 리버스(O/X)는 서버의 fbp 파일 존재 여부에 따라 자동으로 결정됩니다. 등록 후 카코드 관리 목록에서 확인하세요.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-carcode-reg')">취소</button>
+      <button class="btn btn-primary" onclick="saveAndToast('modal-carcode-reg', '카코드가 등록되었습니다.')">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 카코드 수정 모달 (레거시 데이터 예시) ===== -->
+<div id="modal-carcode-edit" class="overlay" onclick="closeOverlay(event, this)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">카코드 수정 — 아이오닉 6</span>
+      <button class="modal-close" onclick="closeModal('modal-carcode-edit')">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- fbp 파일 정보 섹션 ([변경-9]) -->
+      <div class="form-section" style="background:var(--gray-1); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px;">
+        <div class="form-section-title" style="color:var(--gray-5);">fbp 파일 정보 (읽기 전용)</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <div class="form-label">fbp 파일명</div>
+            <input type="text" class="form-input" value="HY-IONIQ6-2024.fbp" readonly style="background:#fff; color:var(--gray-5);">
+          </div>
+          <div class="form-field">
+            <div class="form-label">fbp 버전</div>
+            <input type="text" class="form-input" value="v2.3.1" readonly style="background:#fff; color:var(--gray-5);">
+          </div>
+          <div class="form-field">
+            <div class="form-label">업데이트 일자</div>
+            <input type="text" class="form-input" value="2024-11-15" readonly style="background:#fff; color:var(--gray-5);">
+          </div>
+          <div class="form-field">
+            <div class="form-label">리버스 (자동 감지)</div>
+            <input type="text" class="form-input" value="X (fbp 파일 없음)" readonly style="background:#fff; color:var(--gray-5);">
+          </div>
+        </div>
+      </div>
+
+      <div class="db-banner">
+        <span class="db-banner-icon">🔗</span>
+        제조사·모델명은 <strong>imsform 차량 카테고리 DB</strong> 기반으로 선택합니다.
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">차량 식별 정보</div>
+        <div class="form-grid">
+
+          <div class="form-field span2">
+            <div class="form-label">국산 / 수입 구분 <span class="req">*</span></div>
+            <div class="origin-toggle">
+              <input type="radio" name="edit-origin" id="edit-origin-d" value="domestic" checked onchange="updateBrandList('edit')">
+              <label for="edit-origin-d">🇰🇷 국산차</label>
+              <input type="radio" name="edit-origin" id="edit-origin-i" value="import" onchange="updateBrandList('edit')">
+              <label for="edit-origin-i">🌍 수입차</label>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <div class="form-label">제조사 <span class="req">*</span></div>
+            <select id="edit-brand" class="form-select" onchange="updateModelList('edit')">
+              <option value="">선택</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <div class="form-label">모델명 <span class="req">*</span></div>
+            <select id="edit-model" class="form-select">
+              <option value="">선택</option>
+            </select>
+          </div>
+
+          <!-- fbp 파일 업로드 (260609 신규) -->
+          <div class="form-field span2">
+            <div class="form-label">카코드 파일(fbp) <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+            <input type="file" accept=".fbp" id="edit-fbp-file" class="form-input" style="padding:5px;" onchange="simulateFbpUpload('edit')">
+            <div class="form-hint">재업로드 시 카코드·버전이 자동업데이트됩니다</div>
+          </div>
+
+          <div class="form-field">
+            <div class="form-label">카코드 <span class="req">*</span></div>
+            <input type="text" class="form-input" id="edit-carcode-val" value="HY-IONIQ6-2024" disabled>
+            <div class="form-hint">기등록된 카코드는 카코드명을 변경할 수 없습니다 (260715 신규 규칙).</div>
+          </div>
+
+          <!-- 버전 (260609 신규) -->
+          <div class="form-field">
+            <div class="form-label">버전 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+            <input type="text" class="form-input" id="edit-version-val" value="v2.3.1">
+          </div>
+
+          <!-- 연식 — YYYY 직접입력 (260609 확정, BR-28) -->
+          <div class="form-field">
+            <div class="form-label">연식 <span class="req">*</span></div>
+            <input type="number" class="form-input" id="edit-model-year" value="2024" min="1990" max="2035">
+            <div class="form-hint">YYYY 숫자 직접입력 (260609 확정)</div>
+          </div>
+
+          <!-- 하위모델명 (v1.8: 필수로 변경 — 변경-S) -->
+          <div class="form-field span2">
+            <div class="form-label">하위모델명 <span class="req">*</span></div>
+            <input type="text" class="form-input" value="스탠다드 롱레인지 AWD">
+          </div>
+        </div>
+      </div>
+
+      <!-- 차량 상세 정보 v1.8: 길이·배기량·단종연도 필수(변경-S) -->
+      <div class="form-section">
+        <div class="form-section-title">차량 상세 정보</div>
+        <div class="form-grid">
+          <!-- 유종 — 필수 -->
+          <div class="form-field">
+            <div class="form-label">유종 <span class="req">*</span></div>
+            <select class="form-select" required>
+              <option>경유</option><option>휘발유</option><option>휘발유(무연)</option>
+              <option>LPG</option><option selected>전기</option>
+              <option>하이브리드(경유+전기)</option><option>하이브리드(휘발유+전기)</option>
+            </select>
+          </div>
+          <!-- 배기량 — v1.8 필수(변경-S) -->
+          <div class="form-field">
+            <div class="form-label">배기량 (cc) <span class="req">*</span></div>
+            <input type="text" class="form-input" value="0 (전기)">
+          </div>
+          <!-- 전체길이 — v1.8 필수 복원(변경-S) -->
+          <div class="form-field">
+            <div class="form-label">전체길이 (mm) <span class="req">*</span></div>
+            <input type="text" class="form-input" value="4855">
+          </div>
+          <!-- 단종연도 — v1.8 필수(변경-S) -->
+          <div class="form-field">
+            <div class="form-label">단종연도 <span class="req">*</span></div>
+            <input type="text" class="form-input" value="9999" placeholder="현역: 9999">
+          </div>
+        </div>
+        <div class="info-banner info-banner-blue" style="font-size:12px; margin-top:10px;">
+          ℹ️ 리버스(O/X)는 fbp 파일 존재 여부에 따라 자동 결정됩니다. (BR-27)
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-carcode-edit')">취소</button>
+      <button class="btn btn-primary" onclick="saveAndToast('modal-carcode-edit', '카코드가 수정되었습니다.')">수정</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 차량 등록 모달 (v0.5 — Path A/B/C, 3-column) ===== -->
+<div id="modal-car-reg" class="overlay">
+  <div class="modal modal-xl" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">차량 등록</span>
+      <button class="modal-close" onclick="closeCarRegModal()">×</button>
+    </div>
+
+    <!-- 3-column body -->
+    <div class="reg-cols">
+
+      <!-- ① Left: 차량 정보 가져오기 -->
+      <div class="reg-left">
+        <div class="reg-step-hd">
+          <div class="reg-step-num">1</div>
+          <div>
+            <div class="reg-step-title">차량 정보 가져오기</div>
+            <div class="reg-step-sub">등록증 업로드 또는 차량번호 조회</div>
+          </div>
+        </div>
+
+        <!-- Path 탭 + 직접 입력 버튼 항상 노출 (PRD v0.8 BR 기준) -->
+        <div class="path-tabs">
+          <div class="path-tab active" id="ptab-a" onclick="switchRegPath('A')">
+            <div class="pt-rec">추천</div>
+            📋 등록증<br>업로드
+          </div>
+          <div class="path-tab" id="ptab-b" onclick="switchRegPath('B')">
+            🔍 소유주 검증<br>조회
+          </div>
+        </div>
+        <!-- [직접 입력하기] 버튼 — 항상 노출. Path C 진입 (PRD v0.8) -->
+        <div style="text-align:right; margin-bottom:10px; margin-top:4px;">
+          <button class="btn btn-sm btn-outline" id="ptab-direct" onclick="switchRegPath('C')" style="font-size:11.5px; color:var(--gray-5);">
+            ✏ 직접 입력하기
+          </button>
+        </div>
+
+        <!-- Path A: 등록증 업로드 -->
+        <div id="reg-path-a">
+          <div class="dropzone" id="dropzone-reg" onclick="simulateOCR()">
+            <div id="dz-idle">
+              <div style="font-size:24px; margin-bottom:8px;">📄</div>
+              <div style="font-weight:600; font-size:13px;">차량등록증 업로드</div>
+              <div style="font-size:11px; color:var(--gray-4); margin-top:4px;">끌어다 놓거나 클릭하여 선택<br>jpg · png · pdf · 10MB 이하</div>
+            </div>
+            <div id="dz-loading" style="display:none;">
+              <div class="ocr-step active" id="ocr-step1">① 파일 검증 중...</div>
+              <div class="ocr-step" id="ocr-step2">② 등록증 확인 중... <span style="color:var(--gray-4); font-weight:400;">(차량등록증 여부 검증)</span></div>
+              <div class="ocr-step" id="ocr-step3">③ 등록증 분석 중... <span style="color:var(--gray-4); font-weight:400;">(약 15~30초)</span></div>
+              <div class="ocr-progress"><div id="ocr-bar" style="width:0%; height:100%; background:var(--blue); border-radius:2px; transition:width .3s;"></div></div>
+            </div>
+            <div id="dz-fail" style="display:none;">
+              <div style="color:var(--red); font-weight:700; margin-bottom:4px;">⚠ 등록증을 인식할 수 없습니다</div>
+              <div style="font-size:11.5px; color:var(--gray-5);">올바른 차량등록증 이미지를 다시 업로드해 주세요.</div>
+            </div>
+            <div id="dz-done" style="display:none;">
+              <div style="color:var(--green); font-weight:700; margin-bottom:4px;">✅ OCR 완료 · 목록에 추가됨</div>
+              <div style="font-size:11.5px; color:var(--gray-5);" id="dz-done-msg">다음 등록증을 업로드하거나 [등록하기]를 누르세요.</div>
+            </div>
+          </div>
+          <div id="reg-flist" class="flist-v"></div>
+          <!-- Path A 실패 시 직접 입력 진입 버튼 -->
+          <div id="reg-path-a-fail-banner" class="reg-banner reg-banner-warn" style="display:none; margin-top:10px;">
+            <span>⚠</span>
+            <div style="flex:1;">등록증 업로드가 실패했거나 파일이 없는 경우 직접 입력할 수 있습니다.</div>
+            <button class="btn btn-sm btn-outline" style="white-space:nowrap;" onclick="switchRegPath('C')">✏ 직접 입력하기</button>
+          </div>
+        </div>
+
+        <!-- Path B: 소유주 검증 조회 -->
+        <div id="reg-path-b" style="display:none;">
+          <!-- 서브탭 -->
+          <div style="display:flex; border:1px solid var(--gray-3); border-radius:var(--radius); overflow:hidden; margin-bottom:12px;">
+            <div id="ptab-b-a" onclick="switchPathBMode('A')" style="flex:1; padding:7px 4px; text-align:center; cursor:pointer; font-size:12px; font-weight:600; background:var(--blue); color:#fff; transition:all .15s;">
+              🚗 차량번호+소유자명
+            </div>
+            <div id="ptab-b-b" onclick="switchPathBMode('B')" style="flex:1; padding:7px 4px; text-align:center; cursor:pointer; font-size:12px; font-weight:500; background:#fff; color:var(--gray-5); border-left:1px solid var(--gray-3); transition:all .15s;">
+              🔢 차대번호(VIN)
+            </div>
+          </div>
+
+          <!-- 서브모드 A: 차량번호+소유자명 -->
+          <div id="reg-path-b-a">
+            <div class="qbox">
+              <div class="fg">
+                <label class="flabel">차량번호 <span class="req">*</span></label>
+                <div class="qrow">
+                  <input class="form-input" id="reg-b-plate" placeholder="예: 12가3456" style="flex:1; height:34px;">
+                  <button class="btn btn-primary btn-sm" onclick="simulatePathBQuery(this)">조회</button>
+                </div>
+              </div>
+              <div class="fg">
+                <label class="flabel">소유자 유형 <span class="req">*</span></label>
+                <div class="radio-group">
+                  <label><input type="radio" name="reg-owner-type" value="individual" checked onchange="updateOwnerTypeLabels()"> 개인</label>
+                  <label><input type="radio" name="reg-owner-type" value="corporation" onchange="updateOwnerTypeLabels()"> 법인</label>
+                </div>
+              </div>
+              <div class="fg">
+                <label class="flabel" id="lbl-owner-name">소유자명 <span class="req">*</span></label>
+                <input class="form-input" id="reg-b-owner" placeholder="소유자명" style="height:34px; width:100%;">
+              </div>
+            </div>
+          </div>
+
+          <!-- 서브모드 B: 차대번호(VIN) 단독 -->
+          <div id="reg-path-b-b" style="display:none;">
+            <div class="qbox">
+              <div class="fg">
+                <label class="flabel">차대번호 (VIN) 17자리 <span class="req">*</span></label>
+                <div class="qrow">
+                  <input class="form-input" id="reg-b-vin" placeholder="예: KMHGN41GP8A123456" maxlength="17" style="flex:1; height:34px; font-family:monospace; text-transform:uppercase;">
+                  <button class="btn btn-primary btn-sm" onclick="simulateVINQuery(this)">조회</button>
+                </div>
+                <div class="form-hint" id="reg-b-vin-hint" style="margin-top:4px;">영문 대문자+숫자 17자리 (I, O, Q 제외) · 소유주 검증 미수행 → UNVERIFIED 등록</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="reg-b-flist" class="flist-v"></div>
+          <div id="path-b-result" class="reg-banner reg-banner-success" style="display:none; margin-top:10px;">
+            ✅ 차량 정보가 자동으로 입력되었습니다. 하위모델명(선택)을 직접 입력해 주세요.<br>
+            <span style="font-size:11px; color:var(--green); margin-top:4px; display:block;">하단 <strong>[목록에 추가]</strong> 버튼으로 등록 예정 목록에 추가 후 다음 차량을 조회할 수 있습니다.</span>
+          </div>
+          <div id="path-b-fail" class="reg-banner reg-banner-warn" style="display:none; margin-top:10px; flex-wrap:wrap; gap:8px;">
+            <span>⚠️ 차량을 찾을 수 없습니다. 정보를 다시 확인해 주세요.</span>
+            <button class="btn btn-sm btn-outline" style="margin-left:auto; white-space:nowrap;" onclick="switchRegPath('C')">✏ 직접 입력하기</button>
+          </div>
+        </div>
+
+        <!-- Path C: 직접 입력 안내 -->
+        <div id="reg-path-c" style="display:none;">
+          <div class="reg-banner reg-banner-warn">
+            <span>⚠</span>
+            <div><strong>등록증 업로드·조회가 모두 실패한 경우</strong> 직접 입력합니다.<br>
+            <span style="font-size:11px; margin-top:3px; display:block;">UNVERIFIED 등록 · 등록증 확보 시 VERIFIED 전환 가능</span></div>
+          </div>
+          <div style="font-size:11px; color:var(--gray-4); line-height:2.2;">
+            <div>• <span style="color:var(--red); font-weight:700;">빨간 테두리</span> 필드: 필수 입력</div>
+            <div>• 등록 완료 후 등록증 업로드로 인증 전환 가능</div>
+          </div>
+          <!-- [v1.4] 다건 직접입력 안내 -->
+          <div style="margin-top:10px; padding:8px 10px; background:#f0f6ff; border-radius:6px; border:1px solid var(--blue); font-size:11.5px; color:var(--gray-6);">
+            오른쪽 폼 입력 후 <strong style="color:var(--blue);">[목록에 추가]</strong>를 눌러 여러 차량을 누적하고, 마지막에 <strong>[등록하기 (N건)]</strong>으로 일괄 등록할 수 있습니다.
+          </div>
+        </div>
+
+        <!-- [v1.5] 등록 예정 목록 — 좌측 패널 하단, flist 영역만 내부 스크롤 -->
+        <div id="reg-staging-area" style="margin-top:14px; border-top:1px dashed var(--blue); padding-top:10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-size:12px; font-weight:700; color:var(--blue);">📋 등록 예정 목록</span>
+            <span style="font-size:10px; color:var(--gray-4);"><strong id="reg-stg-count">0</strong>/10건</span>
+          </div>
+          <div id="reg-stg-flist" style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;">
+            <div style="font-size:11px; color:var(--gray-3); text-align:center; padding:10px 0;">아직 추가된 차량이 없습니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② Middle: 차량 정보 입력 -->
+      <div class="reg-mid">
+        <div class="reg-step-hd">
+          <div class="reg-step-num">2</div>
+          <div>
+            <div class="reg-step-title">차량 정보 확인 및 입력</div>
+            <div class="reg-step-sub">자동 입력된 정보를 확인하고 누락 항목을 직접 입력해 주세요</div>
+          </div>
+        </div>
+
+        <!-- 인증 상태 -->
+        <div class="reg-auth-row">
+          <span class="reg-auth-badge rab-unverified" id="reg-auth-badge">미입력</span>
+          <span class="reg-auth-desc" id="reg-auth-desc">좌측에서 차량 정보를 가져오면 인증 상태가 결정됩니다</span>
+        </div>
+
+        <!-- UNVERIFIED 경고 배너 -->
+        <div id="reg-warn-unverified" class="reg-banner reg-banner-warn" style="display:none;">
+          ⚠ 차량등록증 없이 등록 시 <strong>UNVERIFIED</strong> 상태로 저장됩니다. 차량 목록에서 등록증 업로드 시 VERIFIED로 전환됩니다.
+        </div>
+
+        <!-- 서비스 정보 — v1.8: 서버 반영 카코드 이동(변경-AA) -->
+        <div class="form-section">
+          <div class="form-section-title">서비스 정보</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <div class="form-label">업체 <span class="req">*</span></div>
+              <select class="form-select"><option value="">선택</option><option>IMS모빌리티</option><option>ABC렌터카</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">지점 <span class="req">*</span></div>
+              <select class="form-select"><option value="">선택</option><option>서울지점</option><option>부산지점</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">파트너 <span style="font-size:11px; color:var(--gray-4);">자동선택</span></div>
+              <select class="form-select" disabled><option value="">업체·지점 선택 후 자동</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">리셀러 <span style="font-size:11px; color:var(--gray-4);">자동선택</span></div>
+              <select class="form-select" disabled><option value="">업체·지점 선택 후 자동</option></select>
+            </div>
+            <!-- 서버 반영 카코드 — v1.8: 서비스 정보 섹션으로 이동(변경-AA), 필터: 제조사·모델명·연식 동일 -->
+            <div class="form-field span2">
+              <div class="form-label">서버 반영 카코드 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <select id="reg-server-carcode" class="form-select" onchange="matchCarcodeData(this)">
+                <option value="">선택 안 함</option>
+                <option value="HY-IONIQ6-2024">HY-IONIQ6-2024 (아이오닉 6 · 2024 · 전기)</option>
+                <option value="HY-PALI-2023">HY-PALI-2023 (팰리세이드 · 2023 · 경유)</option>
+                <option value="HY-SONATA-2022">HY-SONATA-2022 (쏘나타 · 2022 · 휘발유)</option>
+                <option value="BMW-5SER-2023">BMW-5SER-2023 (5시리즈 · 2023 · 경유)</option>
+              </select>
+              <div class="form-hint">선택 시 유종·배기량·길이 자동 채움 (BR-21). 목록: 차량 정보의 제조사·모델명·연식이 동일한 카코드만 표시.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="reg-sec-div"></div>
+
+        <!-- 차량 정보 -->
+        <div class="form-section">
+          <div class="form-section-title">차량 정보</div>
+
+          <!-- VIN + 통합DB 중복 체크 배너 -->
+          <div class="form-field" style="margin-bottom:14px;">
+            <div class="form-label">차대번호 (VIN) <span class="req">*</span></div>
+            <input type="text" id="reg-vin" class="form-input" placeholder="등록증 업로드 후 자동 채움" maxlength="17">
+            <div class="form-hint" style="margin-top:3px;">17자리 영문+숫자 (I·O·Q 제외)</div>
+            <!-- FMS 자체 차대번호·차량번호 중복 체크 (BR-34, 260715 신규) — 통합DB 체크(BR-23)보다 최우선 수행 -->
+            <div id="reg-fms-dup" class="reg-banner reg-banner-warn" style="display:none; margin-top:8px; margin-bottom:0; padding:8px 12px;">
+              🚫 동일한 차대번호(차량번호)가 존재합니다. 기존 차량을 매각 처리한 후 다시 등록하세요. (BR-34 · FMS 자체 DB 기준. 매각 처리된 차량과는 중복으로 간주하지 않습니다.)
+            </div>
+            <!-- 통합DB 중복 체크 배너 (BR-23) — Case A/B/C-1/C-2 분기 -->
+            <div id="reg-db-check" class="reg-banner reg-banner-info" style="display:none; margin-top:8px; margin-bottom:0; padding:8px 12px;">
+              <span class="reg-spin"></span> 통합DB에서 차량을 확인하는 중입니다...
+            </div>
+            <div id="reg-db-new" class="reg-banner reg-banner-success" style="display:none; margin-top:8px; margin-bottom:0; padding:8px 12px;">
+              ✅ 신규 차량입니다. 등록 후 통합DB에 새로 등록됩니다.
+            </div>
+            <!-- Case B: 동일 등록증 중복 → 등록 차단 -->
+            <div id="reg-db-dup" class="reg-banner reg-banner-warn" style="display:none; margin-top:8px; margin-bottom:0; padding:8px 12px;">
+              🚫 이미 등록된 차량 등록증입니다. 동일한 등록증으로 차량이 기등록되어 있어 추가 등록이 불가합니다.
+            </div>
+            <!-- Case C-1: 동일 VIN, 다른 등록증(업로드본이 최신 또는 동일) → 이력 안내 후 진행 가능 -->
+            <div id="reg-db-history" class="reg-banner reg-banner-info" style="display:none; margin-top:8px; margin-bottom:0; padding:8px 12px;">
+              ℹ️ 해당 차량의 이전 등록증 이력이 존재합니다. 차량 등록은 정상 진행됩니다. (백엔드에서 이력으로 관리됩니다)
+            </div>
+            <!-- Case C-2: 동일 VIN, 다른 등록증(업로드본이 구버전) → 최신 등록증 데이터로 대체, 재확인 안내 (BR-35, 260715 신규) -->
+            <div id="reg-db-outdated" class="reg-banner reg-banner-warn" style="display:none; margin-top:8px; margin-bottom:0; padding:8px 12px;">
+              ⚠ 업로드된 등록증보다 더 최신화된 등록증이 있습니다. 차량등록증을 다시 확인하세요. (자동 채움 값을 기존 최신 등록증 데이터로 대체했습니다. 등록 차단은 아닙니다.)
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-field">
+              <div class="form-label">차량번호 <span class="req">*</span></div>
+              <input type="text" id="reg-carnum" class="form-input" placeholder="자동 채움 예정">
+            </div>
+            <div class="form-field">
+              <div class="form-label">연식 <span class="req">*</span></div>
+              <input type="text" id="reg-year" class="form-input" placeholder="자동 채움 예정">
+              <div class="form-hint">VIN 10번째 자리(ISO 3779) 기반 자동 산출. 차량 등록증 최초등록일 기반 산출 아님 (BR-25).</div>
+            </div>
+          </div>
+
+          <!-- 제조사·모델명 — 260715(v2.8): Path A/B/C 전체 공통 imsform DB 캐스케이드로 통합 (BR-18). Path A/B는 OCR·API 추출값으로 사전 선택(pre-select) 후 재선택 가능, Path C는 직접 선택. 기존 "등록 완료 시 자동 채움" readonly 방식 폐기 -->
+          <div id="reg-mfr-cascade" style="margin-bottom:14px;">
+            <div class="form-grid" style="grid-template-columns:auto 1fr 1fr; gap:10px;">
+              <div class="form-field">
+                <div class="form-label">국산/수입 <span class="req">*</span></div>
+                <div class="origin-toggle">
+                  <input type="radio" id="regv-dom" name="regVehicleType" value="domestic" onchange="updateRegBrandList()">
+                  <label for="regv-dom">국산</label>
+                  <input type="radio" id="regv-imp" name="regVehicleType" value="import" onchange="updateRegBrandList()">
+                  <label for="regv-imp">수입</label>
+                </div>
+              </div>
+              <div class="form-field">
+                <div class="form-label">제조사 <span class="req">*</span></div>
+                <select id="regv-brand" class="form-select" onchange="updateRegModelList()" disabled>
+                  <option value="">국산/수입 선택 후</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <div class="form-label">모델명 <span class="req">*</span></div>
+                <select id="regv-model" class="form-select" disabled>
+                  <option value="">제조사 선택 후</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-hint" id="reg-mfr-hint" style="margin-top:3px;">imsform 차량 카테고리 DB 기준. Path A/B는 추출값으로 사전 선택되며, 운영자가 재선택하여 변경할 수 있습니다.</div>
+          </div>
+
+          <div class="form-grid" style="margin-bottom:14px;">
+            <!-- 하위모델명 — v1.8: 차명(등록증 기재) 대체(변경-X), 선택 -->
+            <div class="form-field">
+              <div class="form-label">하위모델명 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" id="reg-carname" class="form-input" placeholder="소유주 검증 시 자동 채움 (직접 입력 가능)">
+              <div class="form-hint">소유주 검증 seriesname 자동입력. 기존 '차명(등록증 기재)' 대체.</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">최초등록일 <span class="req">*</span></div>
+              <input type="text" id="reg-firstdate" class="form-input" placeholder="자동 채움 / YYYY-MM-DD">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <div class="form-label">유종 <span class="req">*</span></div>
+              <select id="reg-fuel" class="form-select">
+                <option value="">자동 채움 예정</option>
+                <option>경유</option><option>휘발유</option><option>휘발유(무연)</option>
+                <option>LPG</option><option>전기</option>
+                <option>하이브리드(경유+전기)</option><option>하이브리드(휘발유+전기)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">배기량 (cc) <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" id="reg-cc" class="form-input" placeholder="자동 채움 예정">
+            </div>
+            <!-- 길이 — v1.8: 신규 추가(변경-AA), 선택 -->
+            <div class="form-field">
+              <div class="form-label">전체길이 (mm) <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" id="reg-length" class="form-input" placeholder="카코드 선택 시 자동 채움">
+            </div>
+            <!-- 종합검사 주기 — v1.8: 차량 정보 섹션으로 통합(변경-AA) -->
+            <div class="form-field">
+              <div class="form-label">종합검사 주기 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">자동</span></div>
+              <input type="text" class="form-input" placeholder="최초등록일 기준 자동 계산" readonly style="background:var(--gray-1); color:var(--gray-4);">
+              <div class="form-hint">사업용 승용차: 최초 등록일 기준 2년 이후 매년 자동 계산</div>
+            </div>
+            <div class="form-field span2">
+              <div class="form-label">다음 종합검사 만기일 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" class="form-input" placeholder="YYYY-MM-DD (자동 계산 또는 직접 입력)">
+            </div>
+          </div>
+        </div>
+
+        <!-- 단말기 정보 — v1.8: 단말기 기종 추가(변경-Y), 단말기 SN 명칭변경(변경-W) -->
+        <div class="reg-sec-div"></div>
+        <div class="opt-section">
+          <div class="opt-section-title">단말기 정보</div>
+          <div class="form-grid">
+            <!-- 단말기 기종 — v1.8 신규(변경-Y), 읽기전용 -->
+            <div class="form-field">
+              <div class="form-label">단말기 기종</div>
+              <input type="text" class="form-input" placeholder="설치 후 자동 표시" readonly style="background:var(--gray-1); color:var(--gray-4);">
+              <div class="form-hint">현장서비스 설치 완료 후 자동 표시. 직접 입력 불가.</div>
+            </div>
+            <!-- 단말기 SN — v1.8: 명칭변경(변경-W) -->
+            <div class="form-field">
+              <div class="form-label">단말기 SN</div>
+              <input type="text" class="form-input" placeholder="설치 후 자동 표시" readonly style="background:var(--gray-1); color:var(--gray-4);">
+              <div class="form-hint">차량 등록 후 현장서비스 설치 시 자동 표시. 직접 입력 불가.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ Right: 등록증 미리보기 -->
+      <div class="reg-preview">
+        <div class="reg-preview-hd">
+          📄 등록증 미리보기
+          <button class="btn btn-sm btn-outline" id="reg-preview-zoom-btn" style="display:none; font-size:11px; padding:0 8px;" onclick="openRegLightbox()">🔍 확대</button>
+        </div>
+        <div class="reg-preview-bd" id="reg-preview-bd">
+          <div id="rp-empty" class="reg-preview-empty">
+            <div class="picon">📋</div>
+            <div>등록증 업로드 시<br>여기에 표시됩니다</div>
+          </div>
+          <div id="rp-proc" class="reg-preview-proc" style="display:none;">
+            <div style="font-size:24px;">⏳</div>
+            <div>OCR 분석 중...</div>
+          </div>
+          <div id="rp-pathb" class="reg-preview-empty" style="display:none;">
+            <div class="picon">🔍</div>
+            <div>차량번호 조회 후<br>API로 정보를 가져옵니다<br><span style="font-size:10px; color:var(--gray-3);">UNVERIFIED 등록</span></div>
+          </div>
+          <div id="rp-pathc" class="reg-preview-empty" style="display:none;">
+            <div class="picon">✏️</div>
+            <div>직접 입력 모드<br><span style="font-size:10px; color:var(--gray-3);">UNVERIFIED 등록</span></div>
+          </div>
+          <div id="rp-doc" class="mock-doc" style="display:none; align-self:flex-start;">
+            <div class="mock-doc-hdr">자동차 등록증</div>
+            <div class="mock-doc-sub">국토교통부</div>
+            <div class="mock-doc-body">
+              <div class="mock-doc-row"><div class="mock-doc-th">차량번호</div><div class="mock-doc-td" id="mock-plate">12가3456</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">차&nbsp;&nbsp;명</div><div class="mock-doc-td" id="mock-carname">아이오닉 6</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">차대번호</div><div class="mock-doc-td" id="mock-vin" style="font-size:9px; word-break:break-all;">KMHGN41GP8A123456</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">형&nbsp;&nbsp;식</div><div class="mock-doc-td">PE3F4D</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">연&nbsp;&nbsp;식</div><div class="mock-doc-td" id="mock-year">2024</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">최초등록일</div><div class="mock-doc-td" id="mock-regdate">2024.03.15</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">사용연료</div><div class="mock-doc-td" id="mock-fuel">전기</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">배기량</div><div class="mock-doc-td">—</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">소유자</div><div class="mock-doc-td">홍길동</div></div>
+            </div>
+            <div class="mock-doc-footer">
+              <span>발급일: 2024.03.15</span>
+              <div class="mock-doc-stamp">시·군·구청장</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.reg-cols -->
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeCarRegModal()">취소</button>
+      <!-- [v1.4] Path B·C 전용 [목록에 추가] 버튼 — Path A는 OCR 완료 시 자동 추가 -->
+      <button class="btn btn-outline" id="reg-add-btn" style="display:none; border-color:var(--blue); color:var(--blue);" onclick="addCurrentToStaging()">📋 목록에 추가</button>
+      <button class="btn btn-primary" id="reg-submit-btn" onclick="submitVehicleReg()">등록하기</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== 차량 수정(상세보기) 팝업 v1.8 (§4.2.4) — 3컬럼 구조: 등록증 관리 / 데이터 입력 / 등록증 미리보기 ===== -->
+<div id="modal-car-edit" class="overlay">
+  <div class="modal modal-xl" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">상세보기 — 아이오닉 6</span>
+      <button class="modal-close" onclick="closeModal('modal-car-edit')">×</button>
+    </div>
+
+    <div class="reg-cols">
+
+      <!-- ① Left: 등록증 관리 -->
+      <div class="reg-left" style="display:flex; flex-direction:column; gap:0;">
+        <div class="reg-step-hd">
+          <div class="reg-step-num">1</div>
+          <div>
+            <div class="reg-step-title">등록증 관리</div>
+            <div class="reg-step-sub">등록증 업로드 및 인증 상태 관리</div>
+          </div>
+        </div>
+
+        <!-- 인증 상태 표시 -->
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--gray-1); border-radius:var(--radius); margin-bottom:10px; flex-wrap:wrap;">
+          <span class="reg-auth-badge rab-verified" id="edit-auth-badge" style="padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700;">✓ VERIFIED</span>
+          <span style="font-size:11px; color:var(--gray-5); flex:1;" id="edit-auth-desc">OCR + 소유주 검증 완료</span>
+          <!-- 프로토타입 전용 상태 전환 버튼 -->
+          <button class="btn btn-sm btn-outline" style="font-size:10px; color:var(--gray-4); border-color:var(--gray-2); padding:0 6px;" onclick="toggleEditAuthState()" title="[프로토타입] 인증 상태 전환">⇄</button>
+        </div>
+
+        <!-- VERIFIED 패널: 등록증 보기 + 재업로드 -->
+        <div id="edit-verified-panel" style="margin-bottom:10px;">
+          <div style="border:1px solid var(--gray-2); border-radius:var(--radius); overflow:hidden;">
+            <!-- 등록증 썸네일 클릭 시 미리보기로 표시 -->
+            <div style="background:var(--gray-1); padding:12px; text-align:center; cursor:pointer;" onclick="showEditDocInPreview()" title="클릭하면 우측에서 확인">
+              <div style="font-size:28px; margin-bottom:4px;">📋</div>
+              <div style="font-size:11px; color:var(--blue); font-weight:600;">차량등록증 보기</div>
+              <div style="font-size:10px; color:var(--gray-4); margin-top:2px;">발급일: 2024-03-15</div>
+            </div>
+            <div style="padding:8px 10px; display:flex; gap:6px; border-top:1px solid var(--gray-2);">
+              <button class="btn btn-outline btn-sm" style="flex:1; font-size:11px;" onclick="showEditDocInPreview()">📄 보기</button>
+              <button class="btn btn-outline btn-sm" id="edit-btn-reupload-doc" style="flex:1; font-size:11px;" onclick="showEditReuploadPanel()">🔄 재업로드</button>
+            </div>
+          </div>
+          <!-- 재업로드 드롭존 (기본 숨김) -->
+          <div id="edit-reupload-zone" style="display:none; margin-top:8px;">
+            <div class="dropzone" style="padding:16px;" onclick="simulateEditDocUpload()">
+              <div id="edit-dz-idle">
+                <div style="font-size:20px; margin-bottom:4px;">📤</div>
+                <div style="font-size:12px; font-weight:600;">새 등록증 업로드</div>
+                <div style="font-size:10.5px; color:var(--gray-4); margin-top:3px;">클릭 또는 드래그</div>
+              </div>
+              <div id="edit-dz-loading" style="display:none; font-size:12px; color:var(--gray-5);">
+                <span class="reg-spin"></span> 등록증 검증 중...
+              </div>
+              <div id="edit-dz-done" style="display:none; color:var(--green); font-size:12px; font-weight:600;">
+                ✅ 업로드 완료
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- UNVERIFIED 패널: 업로드 드롭존 -->
+        <div id="edit-unverified-panel" style="display:none; margin-bottom:10px;">
+          <div class="reg-banner reg-banner-warn" style="margin-bottom:8px; padding:8px 10px; font-size:11.5px;">
+            ⚠ 차량등록증 미확인. 업로드 시 VERIFIED 전환.
+          </div>
+          <div class="dropzone" style="padding:16px;" onclick="simulateEditDocUpload()">
+            <div id="edit-dz-idle-u">
+              <div style="font-size:20px; margin-bottom:4px;">📤</div>
+              <div style="font-size:12px; font-weight:600;">차량등록증 업로드</div>
+              <div style="font-size:10.5px; color:var(--gray-4); margin-top:3px;">jpg · png · pdf</div>
+            </div>
+            <div id="edit-dz-loading-u" style="display:none; font-size:12px; color:var(--gray-5);">
+              <span class="reg-spin"></span> OCR 분석 중...
+            </div>
+            <div id="edit-dz-done-u" style="display:none; color:var(--green); font-size:12px; font-weight:600;">
+              ✅ VERIFIED 전환 완료
+            </div>
+          </div>
+        </div>
+
+        <!-- Case 1/2 배너 -->
+        <div id="edit-case-banner" style="padding:8px 10px; border-radius:var(--radius); margin-bottom:10px; font-size:11.5px; background:var(--green-pale,#f0fdf4); border:1px solid var(--green,#22c55e); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <span style="color:var(--green); font-weight:700; white-space:nowrap;">📋 Case 2</span>
+          <span style="color:var(--gray-6); flex:1; min-width:0;">등록증 있음 — <strong>차대번호 제외</strong> 수정 가능</span>
+          <button class="btn btn-outline btn-sm" style="font-size:10px; color:var(--gray-4); padding:0 6px; white-space:nowrap;" onclick="toggleEditCase()">전환↔</button>
+        </div>
+
+        <!-- 차량 상태 -->
+        <div style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--gray-1); border-radius:var(--radius); margin-bottom:10px;">
+          <span style="font-size:11px; color:var(--gray-5);">차량상태</span>
+          <span class="badge badge-green" id="edit-vehicle-status-badge">운영</span>
+          <span style="font-size:10px; color:var(--gray-4); flex:1;">[매각 처리] 버튼으로만 변경</span>
+        </div>
+
+        <!-- 하단 기능 버튼 (좌측 패널 하단 고정) -->
+        <div style="margin-top:auto; padding-top:12px; border-top:1px solid var(--gray-2);">
+          <div style="font-size:10px; color:var(--gray-4); font-weight:700; text-transform:uppercase; letter-spacing:.3px; margin-bottom:8px;">기능 버튼</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
+            <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="showToast('차량위치 수정 기능')">📍 위치수정</button>
+            <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="showToast('차량DB 업데이트 기능')">🔄 DB업데이트</button>
+            <button class="btn btn-outline btn-sm" style="font-size:11px;" onclick="showToast('단말기 연결 해제')">🔌 단말기해제</button>
+            <button class="btn btn-outline btn-sm" style="font-size:11px; color:var(--orange); border-color:var(--orange);" onclick="showToast('시동제어 비활성화 기능')">🔒 시동제어</button>
+            <button class="btn btn-outline btn-sm" style="font-size:11px; color:var(--blue); border-color:var(--blue);" onclick="confirmSaleProcess()">💰 매각 처리</button>
+            <button class="btn btn-danger btn-sm" style="font-size:11px;" id="edit-delete-btn" onclick="confirmDeleteVehicle()" title="단말기 미연결 차량만 삭제 가능">🗑 삭제</button>
+          </div>
+          <div style="font-size:10px; color:var(--gray-4); margin-top:5px; text-align:center;">삭제: 서비스DB만 (단말기 미연결)</div>
+        </div>
+      </div><!-- /.reg-left -->
+
+      <!-- ② Middle: 차량 정보 수정 -->
+      <div class="reg-mid">
+        <div class="reg-step-hd">
+          <div class="reg-step-num">2</div>
+          <div>
+            <div class="reg-step-title">차량 정보 수정</div>
+            <div class="reg-step-sub">기등록 정보를 확인하고 수정하세요</div>
+          </div>
+        </div>
+
+        <!-- UNVERIFIED 경고 배너 -->
+        <div id="edit-unverified-banner" class="reg-banner reg-banner-warn" style="display:none; margin-bottom:12px;">
+          ⚠ 차량등록증이 미확인된 차량입니다. 좌측 패널에서 등록증을 업로드하면 VERIFIED 상태로 전환됩니다.
+        </div>
+
+        <!-- 서비스 정보 — v1.8: 서버 반영 카코드 포함(변경-AA) -->
+        <div class="form-section">
+          <div class="form-section-title">서비스 정보</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <div class="form-label">업체 <span class="req">*</span></div>
+              <select class="form-select"><option>IMS모빌리티</option><option>ABC렌터카</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">지점 <span class="req">*</span></div>
+              <select class="form-select"><option>서울지점</option><option>부산지점</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">파트너 <span style="font-size:11px; color:var(--gray-4);">자동선택</span></div>
+              <select class="form-select" disabled><option>파트너A (자동)</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">리셀러 <span style="font-size:11px; color:var(--gray-4);">자동선택</span></div>
+              <select class="form-select" disabled><option>리셀러A (자동)</option></select>
+            </div>
+            <!-- 서버 반영 카코드 — v1.8: 서비스 정보 섹션으로 이동(변경-AA) -->
+            <div class="form-field span2">
+              <div class="form-label">서버 반영 카코드 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <select class="form-select" onchange="matchCarcodeData(this)">
+                <option value="HY-IONIQ6-2024">HY-IONIQ6-2024 (아이오닉 6 · 2024 · 전기)</option>
+                <option value="">선택 안 함</option>
+                <option value="HY-PALI-2023">HY-PALI-2023 (팰리세이드 · 2023 · 경유)</option>
+                <option value="HY-SONATA-2022">HY-SONATA-2022 (쏘나타 · 2022 · 휘발유)</option>
+              </select>
+              <div class="form-hint">선택 시 유종·배기량·길이 자동 채움 (BR-21). 목록: 제조사·모델명·연식 동일한 카코드만 표시.</div>
+            </div>
+            <!-- 메모 (GAP-03 반영) -->
+            <div class="form-field span2">
+              <div class="form-label">메모</div>
+              <input type="text" class="form-input" value="" placeholder="메모 입력">
+            </div>
+          </div>
+        </div>
+
+        <div class="reg-sec-div"></div>
+
+        <!-- 차량 정보 — v1.8: 차명→하위모델명, 승차정원 제거, 길이 추가(변경-X·Z·AA) -->
+        <div class="form-section">
+          <div class="form-section-title">차량 정보</div>
+          <div class="form-grid">
+            <div class="form-field span2">
+              <div class="form-label">차대번호 (VIN) <span class="req">*</span></div>
+              <!-- Case 1: 수동 입력 가능 / Case 2(등록증 있음): 읽기전용 (BR-25) -->
+              <input type="text" id="edit-vin" class="form-input" value="KMHGN41GP8A123456" readonly style="background:var(--gray-1); color:var(--gray-4); font-family:monospace; letter-spacing:.5px;">
+              <div class="form-hint" id="edit-vin-hint">Case 2 — 차량등록증 등록됨: 차대번호 읽기 전용 (BR-25). 수정 필요 시 SYS_ADMIN 문의.</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">차량번호 <span class="req">*</span></div>
+              <input type="text" class="form-input" value="123가4567">
+            </div>
+            <div class="form-field">
+              <div class="form-label">연식</div>
+              <!-- Case 1(등록증 없음): 수정 가능 / Case 2(등록증 있음): 읽기전용 (BR-25) -->
+              <input type="text" id="edit-year" class="form-input" value="2024" readonly style="background:var(--gray-1); color:var(--gray-4);">
+              <div class="form-hint" id="edit-year-hint">Case 2 — 차량등록증 등록됨: 연식 읽기 전용 (BR-25). ※ VIN 10번째 자리(ISO 3779) 기반 확정값. 수정 필요 시 SYS_ADMIN 문의.</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">제조사 <span class="req">*</span></div>
+              <input type="text" class="form-input" value="현대">
+            </div>
+            <div class="form-field">
+              <div class="form-label">모델명 <span class="req">*</span></div>
+              <input type="text" class="form-input" value="아이오닉 6">
+            </div>
+            <!-- 하위모델명 — v1.8: 차명(등록증 기재) 대체(변경-X), 선택 -->
+            <div class="form-field span2">
+              <div class="form-label">하위모델명 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" class="form-input" value="스탠다드 롱레인지 AWD" placeholder="소유주 검증 seriesname 자동입력 가능">
+            </div>
+            <div class="form-field">
+              <div class="form-label">최초등록일 <span class="req">*</span></div>
+              <input type="text" class="form-input" value="2024-03-15">
+            </div>
+            <div class="form-field">
+              <div class="form-label">유종 <span class="req">*</span></div>
+              <select class="form-select">
+                <option selected>전기</option>
+                <option>경유</option><option>휘발유</option><option>휘발유(무연)</option>
+                <option>LPG</option><option>하이브리드(경유+전기)</option><option>하이브리드(휘발유+전기)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">배기량 (cc) <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" class="form-input" value="0 (전기)">
+            </div>
+            <!-- 길이 — v1.8 신규 추가(변경-AA) -->
+            <div class="form-field">
+              <div class="form-label">전체길이 (mm) <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" class="form-input" value="4855">
+            </div>
+            <!-- 종합검사 주기 — 자동 계산 -->
+            <div class="form-field">
+              <div class="form-label">종합검사 주기 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">자동</span></div>
+              <input type="text" class="form-input" value="매년 (2026-03-15~)" readonly style="background:var(--gray-1); color:var(--gray-4);">
+              <div class="form-hint">최초 등록일 기준 2년 이후 매년 자동 계산</div>
+            </div>
+            <div class="form-field">
+              <div class="form-label">다음 종합검사 만기일 <span style="font-size:11px; color:var(--gray-4); font-weight:400;">선택</span></div>
+              <input type="text" class="form-input" value="2026-03-15">
+            </div>
+            <!-- 승차정원: v1.8 제거(변경-AA) -->
+          </div>
+        </div>
+
+        <div class="reg-sec-div"></div>
+
+        <!-- 단말기 정보 — v1.8: 단말기 기종 신규 추가(변경-Z), 단말기 SN 명칭변경(변경-W) -->
+        <div class="form-section">
+          <div class="form-section-title">단말기 정보</div>
+          <div class="form-grid">
+            <!-- 단말기 기종 — v1.8 신규(변경-Z), 읽기전용 -->
+            <div class="form-field">
+              <div class="form-label">단말기 기종</div>
+              <input type="text" class="form-input" value="FMS-T100" readonly style="background:var(--gray-1); color:var(--gray-5); font-family:monospace;">
+              <div class="form-hint">현장서비스 설치 시 자동. 수정 불가.</div>
+            </div>
+            <!-- 단말기 SN — v1.8: 명칭변경(변경-W), 읽기전용 -->
+            <div class="form-field">
+              <div class="form-label">단말기 SN</div>
+              <input type="text" class="form-input" value="SN-20240001" readonly style="background:var(--gray-1); color:var(--gray-5); font-family:monospace;">
+              <div class="form-hint">현장서비스 설치 후 자동 표시. 수정 불가.</div>
+            </div>
+            <!-- 통신모드 (GAP-02 반영) -->
+            <div class="form-field">
+              <div class="form-label">통신모드</div>
+              <select class="form-select">
+                <option value="">선택</option>
+                <option selected>OBD</option>
+                <option>NonOBD</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div><!-- /.reg-mid -->
+
+      <!-- ③ Right: 등록증 미리보기 -->
+      <div class="reg-preview">
+        <div class="reg-preview-hd">
+          📄 등록증 미리보기
+          <button class="btn btn-sm btn-outline" id="edit-preview-zoom-btn" style="display:none; font-size:11px; padding:0 8px;" onclick="openEditLightbox()">🔍 확대</button>
+        </div>
+        <div class="reg-preview-bd" id="edit-preview-bd">
+          <!-- VERIFIED: 등록증 표시 -->
+          <div id="ep-doc" class="mock-doc" style="align-self:flex-start;">
+            <div class="mock-doc-hdr">자동차 등록증</div>
+            <div class="mock-doc-sub">국토교통부</div>
+            <div class="mock-doc-body">
+              <div class="mock-doc-row"><div class="mock-doc-th">차량번호</div><div class="mock-doc-td">123가4567</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">차&nbsp;&nbsp;명</div><div class="mock-doc-td">아이오닉 6</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">차대번호</div><div class="mock-doc-td" style="font-size:9px; word-break:break-all;">KMHGN41GP8A123456</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">형&nbsp;&nbsp;식</div><div class="mock-doc-td">PE3F4D</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">연&nbsp;&nbsp;식</div><div class="mock-doc-td">2024</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">최초등록일</div><div class="mock-doc-td">2024.03.15</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">사용연료</div><div class="mock-doc-td">전기</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">배기량</div><div class="mock-doc-td">—</div></div>
+              <div class="mock-doc-row"><div class="mock-doc-th">소유자</div><div class="mock-doc-td">홍길동</div></div>
+            </div>
+            <div class="mock-doc-footer">
+              <span>발급일: 2024.03.15</span>
+              <div class="mock-doc-stamp">시·군·구청장</div>
+            </div>
+          </div>
+          <!-- UNVERIFIED: 빈 상태 -->
+          <div id="ep-empty" class="reg-preview-empty" style="display:none;">
+            <div class="picon">📋</div>
+            <div>등록증 미확인<br><span style="font-size:10px; color:var(--gray-3);">좌측 패널에서 업로드하세요</span></div>
+          </div>
+        </div>
+      </div><!-- /.reg-preview -->
+
+    </div><!-- /.reg-cols -->
+
+    <div class="modal-footer" style="justify-content:flex-end; gap:8px;">
+      <button class="btn btn-outline" onclick="closeModal('modal-car-edit')">취소</button>
+      <button class="btn btn-primary" onclick="saveCarEditWithConfirm()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 차량등록증 보기 (상세보기 팝업 전용) -->
+<div id="modal-edit-doc" class="lightbox" onclick="document.getElementById('modal-edit-doc').classList.remove('open')">
+  <div class="lightbox-inner" onclick="event.stopPropagation()">
+    <button class="lightbox-close" onclick="document.getElementById('modal-edit-doc').classList.remove('open')">×</button>
+    <div class="mock-doc">
+      <div class="mock-doc-hdr">자동차 등록증</div>
+      <div class="mock-doc-sub">국토교통부</div>
+      <div class="mock-doc-body">
+        <div class="mock-doc-row"><div class="mock-doc-th">차량번호</div><div class="mock-doc-td">123가4567</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">차&nbsp;&nbsp;명</div><div class="mock-doc-td">아이오닉 6</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">차대번호</div><div class="mock-doc-td" style="font-size:9px; word-break:break-all;">KMHGN41GP8A123456</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">연&nbsp;&nbsp;식</div><div class="mock-doc-td">2024</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">최초등록일</div><div class="mock-doc-td">2024.03.15</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">사용연료</div><div class="mock-doc-td">전기</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">소유자</div><div class="mock-doc-td">홍길동</div></div>
+      </div>
+      <div class="mock-doc-footer"><span>발급일: 2024.03.15</span><div class="mock-doc-stamp">시·군·구청장</div></div>
+    </div>
+    <div style="padding:8px 10px; font-size:11px; color:var(--gray-4); text-align:center;">등록증 발부일: 2024-03-15 · 업로드: 2024-03-20</div>
+  </div>
+</div>
+
+<!-- ===== 등록증 확대 라이트박스 ===== -->
+<div id="reg-lightbox" class="lightbox" onclick="closeRegLightbox()">
+  <div class="lightbox-inner" onclick="event.stopPropagation()">
+    <button class="lightbox-close" onclick="closeRegLightbox()">×</button>
+    <div class="mock-doc">
+      <div class="mock-doc-hdr">자동차 등록증</div>
+      <div class="mock-doc-sub">국토교통부</div>
+      <div class="mock-doc-body">
+        <div class="mock-doc-row"><div class="mock-doc-th">차량번호</div><div class="mock-doc-td">12가3456</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">차&nbsp;&nbsp;명</div><div class="mock-doc-td">아이오닉 6</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">차대번호</div><div class="mock-doc-td" style="font-size:9px; word-break:break-all;">KMHGN41GP8A123456</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">형&nbsp;&nbsp;식</div><div class="mock-doc-td">PE3F4D</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">연&nbsp;&nbsp;식</div><div class="mock-doc-td">2024</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">최초등록일</div><div class="mock-doc-td">2024.03.15</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">사용연료</div><div class="mock-doc-td">전기</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">배기량</div><div class="mock-doc-td">—</div></div>
+        <div class="mock-doc-row"><div class="mock-doc-th">소유자</div><div class="mock-doc-td">홍길동</div></div>
+      </div>
+      <div class="mock-doc-footer">
+        <span>발급일: 2024.03.15</span>
+        <div class="mock-doc-stamp">시·군·구청장</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ===== 카코드 제원 DB (prototype mock) =====
+const CARCODE_SPECS = {
+  'HY-IONIQ6-2024': { brand:'현대', model:'아이오닉 6', fuel:'전기', cc:'0 (전기)', cap:'5' },
+  'HY-PALI-2023':   { brand:'현대', model:'팰리세이드', fuel:'디젤', cc:'2199', cap:'7' },
+  'HY-SONATA-2022': { brand:'현대', model:'쏘나타', fuel:'가솔린', cc:'1999', cap:'5' },
+  'BMW-5SER-2023':  { brand:'BMW', model:'5시리즈', fuel:'디젤', cc:'1995', cap:'5' },
+};
+
+// ===== imsform 차량 카테고리 DB =====
+const VEHICLE_DB = {
+  domestic: {
+    "현대": ["i30","i40","그랜저","넥쏘","마이티","맥스크루즈","베뉴","베라크루즈","벨로스터","스타렉스","스타리아","싼타페","쏘나타","쏠라티","아반떼","아슬란","아이오닉","아이오닉 5","아이오닉 6","에쿠스","엑센트","카운티","캐스퍼","코나","투싼","팰리세이드","포터"],
+    "기아": ["EV6","EV9","K3","K5","K7","K8","K9","니로","레이","모닝","모하비","봉고","셀토스","스토닉","스팅어","스포티지","쏘렌토","쏘울","오피러스","카니발","카렌스","포르테","프라이드"],
+    "제네시스": ["EQ900","G70","G80","G90","GV60","GV70","GV80","330, 380"],
+    "르노삼성": ["QM3","QM5","QM6","SM3","SM5","SM6","SM7","XM3","마스터","조에","캡처","클리오","트위지"],
+    "쉐보레": ["다마스","라보","레스타","마티즈","말리부","볼트","스파크","아베오","알페온","올란도","이쿼녹스","임팔라","캡티바","크루즈","트래버스","트랙스","트레일블레이저"],
+    "쌍용": ["렉스턴","렉스턴 스포츠","로디우스","체어맨","코란도","코란도 스포츠","코란도 투리스모","토레스","티볼리"],
+    "예스알브이": ["제우스"],
+    "스타모빌": ["ST5"],
+    "다온티앤티": ["윙스타"],
+    "기타_국산": ["상용버스","상용트럭","캠핑카","특수(군용)","기타"]
+  },
+  import: {
+    "벤츠": ["A 클래스","AMG GT","B 클래스","C 클래스","CL 클래스","CLA 클래스","CLS 클래스","E 클래스","EQA","EQC","EQE","EQS","EQS SUV","G 클래스","GL 클래스","GLA 클래스","GLB 클래스","GLC 클래스","GLE 클래스","GLK 클래스","GLS 클래스","M 클래스","R 클래스","S 클래스","SL 클래스","SLC 클래스","SLK 클래스","SLS AMG","V 클래스","스프린터"],
+    "BMW": ["1M","1시리즈","2시리즈","3시리즈","4시리즈","5시리즈","6시리즈","7시리즈","8시리즈","i3","i4","i8","ix3","M2","M3","M4","M5","M6","M8","X1","X2","X3","X4","X5","X6","X7","Z4"],
+    "아우디": ["A1","A3","A4","A5","A6","A7","A8","E-트론","Q2","Q3","Q4 e-트론","Q5","Q7","Q8","R8","RS3","RS5","RS6","RS7","RSQ8","S3","S4","S5","S6","S7","S8","SQ5","SQ8","TT","TTRS","TTS"],
+    "랜드로버": ["디스커버리","디스커버리 스포츠","디펜더","레인지로버","레인지로버 벨라","레인지로버 스포츠","레인지로버 이보크","프리랜더"],
+    "폭스바겐": ["CC","EOS","ID.4","골프","비틀","시로코","아테온","아틀라스","제타","투아렉","트랜스포터","티구안","티록","파사트","페이톤","폴로"],
+    "포르쉐": ["718","911","마칸","박스터","카이맨","카이엔","타이칸","파나메라"],
+    "렉서스": ["CT","ES","GS","GX","IS","LC","LS","LX","NX","RC","RX","UX"],
+    "마세라티": ["그란카브리오","그란투리스모","그레칼레","기블리","르반떼","콰트로포르테"],
+    "지프": ["그랜드 체로키","글래디에이터","랭글러","레니게이드","체로키","컴패스","패트리어트"],
+    "재규어": ["E-PACE","F-PACE","F-TYPE","I-PACE","XE","XF","XJ","XJR","XK","XKR"],
+    "테슬라": ["모델 3","모델 S","모델 X","모델 Y"],
+    "도요타": ["86","4Runner","bB","C-HR","FJ 크루저","iQ","노아","라브4","락티스","랜드크루저","마크X","매트릭스","베르소","벤자","벨파이어","세콰이어","수프라","시에나","시엔타","아발론","아이고","알파드","야리스(비츠)","에스티마","위시","캠리","코롤라","크라운","타코마","툰드라","파쏘","포르테","프레미오","프리우스","프리우스C","하이랜더","하이에이스","해리어"],
+    "포드": ["F150","S-MAX","레인저","머스탱","몬데오","브롱코","이스케이프","익스페디션","익스플로러","코치맨","쿠가","토러스","트랜짓","포커스","퓨전","피에스타"],
+    "미니": ["로드스터","컨트리맨","쿠퍼","쿠퍼 컨버터블","쿠페","클럽맨","페이스맨","해치백"],
+    "혼다": ["CR-V","CR-Z","Fit","HR-V","N-BOX","N-ONE","S660","라이프","레전드","릿지라인","스탭웨건","스트림","시빅","어코드","오딧세이","인사이트","인스파이어","크로스투어","파일럿"],
+    "닛산": ["370Z","GT-R","NV","라페스타","로그","리프","맥시마","모코","무라노","베르사","세레나","센트라","스카이라인","시마","알마다","알티마","엑스테라","엑스트레일","엘그란드","윙로드","쥬크","캐시카이","퀘스트","큐브","타이탄","티아나","패스파인더","푸가","프론티어"],
+    "볼보": ["C30","C70","S40","S60","S80","S90","V40","V50","V60","V70","V90","XC40","XC60","XC70","XC90"],
+    "람보르기니": ["가야르도","아벤타도르","우라칸","우루스"],
+    "페라리": ["458","488","599","812","F12 베를리네타","F8","FF","GTC4 루쏘","SF90","로마","캘리포니아","포르토피노"],
+    "기타_수입": ["기타"]
+  }
+};
+
+const CAPACITY_MAP = {
+  sedan: [1,2,3,4,5],
+  suv: [3,4,5,6,7,8,9,10,11,12,13,14,15],
+  rv: [3,4,5,6,7,8,9,10,11,12,13,14,15],
+  etc: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+};
+
+// ===== 브랜드 목록 업데이트 =====
+function updateBrandList(prefix) {
+  const origin = document.querySelector(`input[name="${prefix}-origin"]:checked`)?.value;
+  const brandSel = document.getElementById(`${prefix}-brand`);
+  const modelSel = document.getElementById(`${prefix}-model`);
+
+  brandSel.disabled = false;
+  brandSel.innerHTML = '<option value="">브랜드 선택</option>';
+  modelSel.innerHTML = '<option value="">제조사를 먼저 선택하세요</option>';
+  modelSel.disabled = true;
+
+  const brands = origin === 'domestic' ? VEHICLE_DB.domestic : VEHICLE_DB.import;
+  Object.keys(brands).forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    brandSel.appendChild(opt);
+  });
+
+  // 수정 모달: 현대 pre-select
+  if (prefix === 'edit') {
+    brandSel.value = '현대';
+    updateModelList('edit');
+    setTimeout(() => { document.getElementById('edit-model').value = '아이오닉 6'; }, 50);
+  }
+}
+
+// ===== 모델 목록 업데이트 =====
+function updateModelList(prefix) {
+  const origin = document.querySelector(`input[name="${prefix}-origin"]:checked`)?.value;
+  const brandVal = document.getElementById(`${prefix}-brand`).value;
+  const modelSel = document.getElementById(`${prefix}-model`);
+
+  if (!brandVal) { modelSel.disabled = true; modelSel.innerHTML = '<option>제조사를 먼저 선택하세요</option>'; return; }
+
+  const brands = origin === 'domestic' ? VEHICLE_DB.domestic : VEHICLE_DB.import;
+  const models = brands[brandVal] || [];
+
+  modelSel.disabled = false;
+  modelSel.innerHTML = '<option value="">모델 선택</option>';
+  models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    modelSel.appendChild(opt);
+  });
+}
+
+// ===== 승차인원 목록 업데이트 =====
+function updateCapacityList(prefix) {
+  const vtype = document.getElementById(`${prefix}-vtype`).value;
+  const capSel = document.getElementById(`${prefix}-capacity`);
+
+  if (!vtype) { capSel.disabled = true; capSel.innerHTML = '<option>차량종류를 먼저 선택하세요</option>'; return; }
+
+  const caps = CAPACITY_MAP[vtype] || [];
+  capSel.disabled = false;
+  capSel.innerHTML = '<option value="">선택</option>';
+  caps.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = `${n}인`;
+    capSel.appendChild(opt);
+  });
+}
+
+// ===== 수정 모달 초기화 (GAP-v2-05: 레거시 데이터 fallback BR-20) =====
+function initEditModal() {
+  // 국산 기본 선택 후 브랜드 로드
+  updateBrandList('edit');
+  // 레거시 fallback 시뮬레이션: 현대/아이오닉 6는 DB에 있으므로 pre-select
+  // 만약 기존 제조사값이 imsform DB에 없을 경우 드롭다운 최상단에 "(기존값: [원본텍스트])" 추가 (BR-20)
+  // 예시: 삼성르노(구 브랜드명)처럼 DB 미등록 케이스 시뮬레이션
+  const brandSel = document.getElementById('edit-brand');
+  if (brandSel) {
+    const legacyOpt = document.createElement('option');
+    legacyOpt.value = '__legacy__';
+    legacyOpt.textContent = '(기존값: 삼성르노) — DB 미등록';
+    legacyOpt.style.color = 'var(--orange)';
+    // 목록 상단(index 1)에 삽입 (0번은 기본 선택 옵션)
+    brandSel.insertBefore(legacyOpt, brandSel.options[1] || null);
+  }
+}
+
+// ===== 모달 제어 =====
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'modal-carcode-edit') initEditModal();
+  if (id === 'modal-car-reg') switchRegPath('A'); // 차량 등록 모달 초기화 (Path A 기본)
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeOverlay(e, el) { if (e.target === el) el.classList.remove('open'); }
+
+// ===== 저장 & 토스트 =====
+function saveAndToast(modalId, msg) {
+  closeModal(modalId);
+  const t = document.getElementById('toast');
+  t.textContent = '✅ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== 차량 등록 Path 전환 (3-column modal) — GAP-v2-02: 입력 내용 초기화 확인 =====
+let currentRegPath = 'A';
+
+function switchRegPath(path) {
+  if (path === currentRegPath) return;
+
+  // 기존 입력값 존재 여부 체크 (GAP-v2-02: 경로 전환 시 확인 모달)
+  const inputIds = ['reg-vin','reg-carnum','reg-year','reg-carname','reg-firstdate','reg-cc'];
+  const hasInput = inputIds.some(id => {
+    const el = document.getElementById(id);
+    return el && el.value && el.value.trim() !== '';
+  });
+  if (hasInput) {
+    if (!window.confirm('입력 내용이 초기화됩니다. 계속하시겠습니까?')) return;
+  }
+
+  currentRegPath = path;
+  // 탭 활성화
+  ['a','b','c'].forEach(p => {
+    const tab = document.getElementById('ptab-' + p);
+    if (tab) tab.classList.toggle('active', path.toLowerCase() === p);
+  });
+  // 좌측 패널 Path 표시
+  document.getElementById('reg-path-a').style.display = path === 'A' ? '' : 'none';
+  document.getElementById('reg-path-b').style.display = path === 'B' ? '' : 'none';
+  document.getElementById('reg-path-c').style.display = path === 'C' ? '' : 'none';
+  // 제조사·모델명 캐스케이드 초기화 (260715: 전 Path 공통, BR-18)
+  ['regv-dom','regv-imp'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  const cascadeBrand = document.getElementById('regv-brand');
+  const cascadeModel = document.getElementById('regv-model');
+  if (cascadeBrand) { cascadeBrand.innerHTML = '<option value="">국산/수입 선택 후</option>'; cascadeBrand.disabled = true; cascadeBrand.classList.remove('autofill'); }
+  if (cascadeModel) { cascadeModel.innerHTML = '<option value="">제조사 선택 후</option>'; cascadeModel.disabled = true; cascadeModel.classList.remove('autofill'); }
+  // UNVERIFIED 경고
+  const warnEl = document.getElementById('reg-warn-unverified');
+  if (warnEl) warnEl.style.display = path !== 'A' ? '' : 'none';
+  // 인증 상태 초기화
+  const authDesc = {A:'등록증 업로드 시 인증 상태가 결정됩니다', B:'조회 완료 후 UNVERIFIED로 등록됩니다', C:'직접 입력 — UNVERIFIED로 등록됩니다'};
+  setRegAuth('unverified', authDesc[path] || '');
+  // 필드 초기화
+  ['reg-vin','reg-carnum','reg-year','reg-carname','reg-firstdate','reg-cc','reg-cap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value=''; el.classList.remove('autofill','req-field'); el.readOnly=false; }
+  });
+  const fuel = document.getElementById('reg-fuel');
+  if (fuel) { fuel.value=''; fuel.classList.remove('autofill'); }
+
+  // FMS 자체 중복 체크(BR-34) + 통합DB 중복 체크(BR-23/BR-35) 배너 초기화
+  ['reg-fms-dup','reg-db-check','reg-db-new','reg-db-dup','reg-db-history','reg-db-outdated'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display='none';
+  });
+  // 등록하기 버튼 활성화 초기화
+  const submitBtn = document.getElementById('reg-submit-btn');
+  if (submitBtn) { submitBtn.disabled=false; submitBtn.title=''; }
+
+  // Path C: 승차정원 드롭다운 ↔ 텍스트 전환 (GAP-05)
+  const capInput = document.getElementById('reg-cap');
+  const capSel   = document.getElementById('reg-cap-sel');
+  const capReq   = document.getElementById('reg-cap-req');
+  if (capInput && capSel) {
+    const isC = path === 'C';
+    capInput.style.display = isC ? 'none' : '';
+    capSel.style.display   = isC ? '' : 'none';
+    if (capReq) capReq.style.display = isC ? '' : 'none';
+    if (isC) capSel.value = '';
+  }
+
+  // Path별 설정
+  if (path === 'A') {
+    setRegPlaceholders({vin:'등록증 업로드 후 자동 채움', carnum:'자동 채움', year:'자동 채움',
+      carname:'자동 채움', firstdate:'자동 채움', cc:'자동 채움', cap:'자동 채움'});
+    document.getElementById('dz-idle').style.display='';
+    document.getElementById('dz-loading').style.display='none';
+    document.getElementById('dz-done').style.display='none';
+    document.getElementById('dz-fail').style.display='none';
+    document.getElementById('reg-flist').innerHTML='';
+    document.getElementById('reg-path-a-fail-banner').style.display='none';
+    showRegPreview('empty');
+    updateRegSubmitBtn();
+    // [v1.4] Path A: [목록에 추가] 버튼 숨기기 (OCR 완료 시 자동 추가)
+    const addBtnA = document.getElementById('reg-add-btn');
+    if (addBtnA) addBtnA.style.display = 'none';
+  } else if (path === 'B') {
+    setRegPlaceholders({vin:'조회 후 자동 채움', carnum:'조회 후 자동 채움', year:'API 자동 채움',
+      carname:'직접 입력 필요', firstdate:'조회 후 자동 채움', cc:'API 자동 채움', cap:'API 자동 채움'});
+    ['reg-carname'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.classList.add('req-field');
+    });
+    switchPathBMode('A');
+    showRegPreview('pathb');
+    // [v1.4] Path B: 조회 결과 없을 때는 [목록에 추가] 숨기기 (결과 시 simulatePathBQuery에서 표시)
+    const addBtnB = document.getElementById('reg-add-btn');
+    if (addBtnB) addBtnB.style.display = 'none';
+  } else {
+    // Path C: [직접 입력하기] 버튼으로만 진입 (PRD GAP-06 해소)
+    setRegPlaceholders({vin:'직접 입력', carnum:'직접 입력', year:'YYYY',
+      carname:'직접 입력', firstdate:'YYYY-MM-DD', cc:'예: 1598', cap:''});
+    ['reg-vin','reg-carnum','reg-year','reg-carname','reg-firstdate'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.classList.add('req-field');
+    });
+    showRegPreview('pathc');
+    // [v1.4] Path C: [목록에 추가] 버튼 항상 표시
+    const addBtnC = document.getElementById('reg-add-btn');
+    if (addBtnC) addBtnC.style.display = '';
+  }
+}
+
+function setRegPlaceholders(map) {
+  const ids = {vin:'reg-vin', carnum:'reg-carnum', year:'reg-year', carname:'reg-carname',
+               firstdate:'reg-firstdate', cc:'reg-cc', cap:'reg-cap'};
+  for (const [k, v] of Object.entries(map)) {
+    const el = document.getElementById(ids[k]); if (el) el.placeholder = v;
+  }
+}
+
+function setRegAuth(type, desc) {
+  const badge = document.getElementById('reg-auth-badge');
+  const descEl = document.getElementById('reg-auth-desc');
+  if (!badge) return;
+  const cls = {verified:'rab-verified', unverified:'rab-unverified', pending:'rab-pending'};
+  const labels = {verified:'✓ VERIFIED', unverified:'UNVERIFIED', pending:'처리 중...'};
+  badge.className = 'reg-auth-badge ' + (cls[type] || 'rab-unverified');
+  badge.textContent = labels[type] || type;
+  if (descEl) descEl.textContent = desc;
+}
+
+function showRegPreview(state) {
+  const stateMap = {empty:'rp-empty', loading:'rp-proc', done:'rp-doc', pathb:'rp-pathb', pathc:'rp-pathc'};
+  Object.values(stateMap).forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const zoomBtn = document.getElementById('reg-preview-zoom-btn');
+  if (zoomBtn) zoomBtn.style.display = 'none';
+  const targetId = stateMap[state];
+  if (targetId) {
+    const el = document.getElementById(targetId);
+    if (el) el.style.display = targetId === 'rp-proc' ? 'flex' : '';
+  }
+  if (state === 'done' && zoomBtn) zoomBtn.style.display = '';
+}
+
+// ===== Path A: OCR 시뮬레이션 (3단계: 파일검증→등록증확인→등록증분석) BR-24 =====
+function simulateOCR() {
+  if (document.getElementById('dz-done').style.display !== 'none') return;
+  document.getElementById('dz-idle').style.display='none';
+  document.getElementById('dz-loading').style.display='';
+  document.getElementById('dz-fail').style.display='none';
+  showRegPreview('loading');
+  setRegAuth('pending', '파일을 검증하고 있습니다...');
+
+  const step1 = document.getElementById('ocr-step1');
+  const step2 = document.getElementById('ocr-step2');
+  const step3 = document.getElementById('ocr-step3');
+  [step1, step2, step3].forEach(s => s && s.classList.remove('active'));
+  if (step1) step1.classList.add('active');
+
+  // fitem 추가
+  const flist = document.getElementById('reg-flist');
+  flist.innerHTML='';
+  const fi = document.createElement('div');
+  fi.className='fitem-v'; fi.id='reg-fi-0';
+  fi.innerHTML=`<div class="fitem-vrow"><div class="fitem-vicon">📋</div><div class="fitem-vbody"><div class="fitem-vname">등록증_차량.jpg</div><div class="fitem-vstatus" id="reg-fi-0-status">파일 검증 중...</div></div></div><div class="fitem-vprog" id="reg-fi-0-prog"><div class="fitem-vprog-bar" id="reg-fi-0-bar" style="width:0%"></div></div>`;
+  flist.appendChild(fi);
+
+  const statusEl = document.getElementById('reg-fi-0-status');
+
+  // ① 파일 검증 완료 (600ms)
+  setTimeout(() => {
+    if (step1) step1.classList.remove('active');
+    if (step2) step2.classList.add('active');
+    setRegAuth('pending', '② 등록증 여부를 확인하고 있습니다...');
+    if (statusEl) statusEl.textContent = '등록증 사전 검증 중...';
+
+    // ② 등록증 확인 완료 (1200ms)
+    setTimeout(() => {
+      if (step2) step2.classList.remove('active');
+      if (step3) step3.classList.add('active');
+      setRegAuth('pending', '③ 등록증을 분석하고 있습니다...');
+      if (statusEl) statusEl.textContent = 'OCR 분석 중...';
+      document.getElementById('ocr-bar').style.width = '0%';
+
+      // ③ OCR 진행 애니메이션
+      let prog = 0;
+      const bar = document.getElementById('reg-fi-0-bar');
+      const ocrBar = document.getElementById('ocr-bar');
+      const iv = setInterval(() => {
+        prog = Math.min(prog + 5, 100);
+        if (bar) bar.style.width = prog + '%';
+        if (ocrBar) ocrBar.style.width = prog + '%';
+        if (prog >= 100) {
+          clearInterval(iv);
+          document.getElementById('dz-loading').style.display='none';
+          document.getElementById('dz-done').style.display='';
+          document.getElementById('reg-fi-0-prog').style.display='none';
+          if (statusEl) statusEl.innerHTML='<span style="color:var(--green);">✓</span> OCR 완료';
+
+          // 필드 채우기
+          const mockData = {vin:'KMHGN41GP8A123456', carnum:'12가3456', year:'2024',
+            carname:'아이오닉 6', firstdate:'2024-03-15', cc:'0 (전기)', cap:'5'};
+          const fieldMap = {vin:'reg-vin', carnum:'reg-carnum', year:'reg-year',
+            carname:'reg-carname', firstdate:'reg-firstdate', cc:'reg-cc', cap:'reg-cap'};
+          for (const [k, id] of Object.entries(fieldMap)) {
+            const el = document.getElementById(id);
+            if (el && mockData[k]) { el.value=mockData[k]; el.classList.add('autofill'); el.classList.remove('req-field'); }
+          }
+          const fuel = document.getElementById('reg-fuel');
+          if (fuel) { fuel.value='전기'; fuel.classList.add('autofill'); }
+
+          // 260715: 제조사·모델명 캐스케이드 사전 선택 (BR-18)
+          preselectRegCascade(true, '현대', '아이오닉 6');
+
+          // 미리보기 표시
+          showRegPreview('done');
+          setRegAuth('pending', 'OCR 완료 · 등록 예정 목록에 자동 추가됩니다...');
+
+          // fitem 배지 추가
+          const fitem = document.getElementById('reg-fi-0');
+          if (fitem) {
+            const badge = document.createElement('span');
+            badge.className='fitem-vbadge fvb-ocrdone'; badge.textContent='OCR 완료';
+            fitem.querySelector('.fitem-vrow').appendChild(badge);
+          }
+
+          // FMS 자체 중복 체크(BR-34) 최우선 수행 → 중복 없을 때만 통합DB VIN 체크(BR-23) 진행
+          if (!checkFmsDuplicate('KMHGN41GP8A123456', mockData.carnum)) {
+            checkVINDatabase('KMHGN41GP8A123456', false);
+          }
+
+          // [v1.4] OCR 완료 → 등록 예정 목록에 자동 추가 → 드롭존 리셋 (다음 파일 업로드 준비)
+          setTimeout(() => {
+            addToRegStaging('Path A', mockData.vin, mockData.carnum, true);
+            if (fitem) {
+              const addedBadge = document.createElement('span');
+              addedBadge.style.cssText = 'font-size:10px; color:var(--blue); margin-left:4px;';
+              addedBadge.textContent = '· 목록 추가됨';
+              const row = fitem.querySelector('.fitem-vrow');
+              if (row) row.appendChild(addedBadge);
+            }
+            setRegAuth('pending', '✅ 목록에 추가됨 · 다음 등록증을 업로드하거나 [등록하기]를 누르세요.');
+            document.getElementById('dz-done').style.display = 'none';
+            document.getElementById('dz-idle').style.display = '';
+          }, 1800);
+        }
+      }, 180);
+    }, 1000);
+  }, 700);
+}
+
+// ===== FMS 자체 차대번호·차량번호 중복 체크 (BR-34, 260715 신규) — BR-23보다 최우선 수행 =====
+// 데모용 트리거: 차량번호 "123가4567" 또는 차대번호 "SALGA2FV8HA123456" 입력 시 재현 가능 (기존 운영 중 차량 예시)
+const FMS_ACTIVE_VEHICLE = { vin: 'SALGA2FV8HA123456', carnum: '123가4567' };
+function checkFmsDuplicate(vin, carnum) {
+  const dupEl = document.getElementById('reg-fms-dup');
+  const isDup = (vin && vin === FMS_ACTIVE_VEHICLE.vin) || (carnum && carnum === FMS_ACTIVE_VEHICLE.carnum);
+  if (dupEl) dupEl.style.display = isDup ? '' : 'none';
+  const submitBtn = document.getElementById('reg-submit-btn');
+  if (isDup) {
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.title = '동일한 차대번호(차량번호)의 운영 중 차량이 존재하여 등록 불가 (BR-34)'; }
+  } else if (submitBtn && submitBtn.title === '동일한 차대번호(차량번호)의 운영 중 차량이 존재하여 등록 불가 (BR-34)') {
+    submitBtn.disabled = false; submitBtn.title = '';
+  }
+  return isDup;
+}
+
+// ===== VIN 통합DB 중복 체크 (BR-23) — Case A/B/C-1/C-2 분기 (BR-35, 260715: C-1/C-2 분리) =====
+function checkVINDatabase(vin, forceExisting) {
+  const checkEl    = document.getElementById('reg-db-check');
+  const newEl      = document.getElementById('reg-db-new');
+  const dupEl      = document.getElementById('reg-db-dup');      // Case B: 동일 등록증
+  const histEl     = document.getElementById('reg-db-history'); // Case C-1: 다른 등록증(업로드본 최신/동일)
+  const outdatedEl = document.getElementById('reg-db-outdated'); // Case C-2: 다른 등록증(업로드본 구버전, BR-35)
+
+  [checkEl, newEl, dupEl, histEl, outdatedEl].forEach(el => { if(el) el.style.display='none'; });
+  if (!vin || vin.length < 17) return;
+  if (checkEl) checkEl.style.display='';
+
+  setTimeout(() => {
+    if (checkEl) checkEl.style.display='none';
+    // 프로토타입 케이스 시뮬레이션:
+    // - KNA 시작 → Case B (동일 등록증 중복, 등록 차단)
+    // - KMJ 시작 → Case C-2 (동일 VIN, 업로드본이 기존 최신 등록증보다 구버전, BR-35 신규)
+    // - KMH 시작 → Case C-1 (동일 VIN, 업로드본이 최신 또는 동일)
+    // - 나머지 → Case A (신규 차량)
+    if (vin.startsWith('KNA')) {
+      if (dupEl) dupEl.style.display='';
+      // 등록하기 버튼 비활성화
+      const submitBtn = document.getElementById('reg-submit-btn');
+      if (submitBtn) { submitBtn.disabled=true; submitBtn.title='동일 등록증 중복으로 등록 불가'; }
+    } else if (vin.startsWith('KMJ')) {
+      if (outdatedEl) outdatedEl.style.display='';
+      // BR-35: 자동 채움 값을 기존 최신 등록증 데이터로 대체 (모의: 최초등록일·하위모델명 대체)
+      const firstdateEl = document.getElementById('reg-firstdate');
+      const carnameEl    = document.getElementById('reg-carname');
+      if (firstdateEl) { firstdateEl.value = '2023-11-02'; firstdateEl.classList.add('autofill'); }
+      if (carnameEl)   { carnameEl.value = '스탠다드 롱레인지 (기존 최신 등록증 기준)'; carnameEl.classList.add('autofill'); }
+      showToast('⚠ 기존 최신 등록증 데이터로 자동 채움 값이 대체되었습니다. (BR-35)');
+    } else if (forceExisting || vin.startsWith('KMH')) {
+      if (histEl) histEl.style.display='';
+    } else {
+      if (newEl) newEl.style.display='';
+    }
+  }, 1200);
+}
+
+// ===== 소유자 유형 변경 시 레이블 업데이트 (GAP-04) =====
+function updateOwnerTypeLabels() {
+  const isCorp = document.querySelector('input[name="reg-owner-type"]:checked')?.value === 'corporation';
+  const lblName = document.getElementById('lbl-owner-name');
+  const ownerInput = document.getElementById('reg-b-owner');
+  if (lblName) lblName.innerHTML = (isCorp ? '법인명' : '소유자명') + ' <span class="req">*</span>';
+  if (ownerInput) ownerInput.placeholder = isCorp ? '법인명' : '소유자명';
+}
+
+// ===== 260609 신규 함수 =====
+
+// 매각 처리 컨펌창 (BR-29)
+function confirmSaleProcess() {
+  const choice = confirm(
+    '해당 차대번호 차량의 소유주가 변경된 것이 확실합니까?\n\n' +
+    '[확인] = 단말기 연결 유지 + 매각 상태 전환\n' +
+    '[취소] = 취소\n\n' +
+    '※ 단말기 연결을 해제하려면 먼저 [단말기 연결해제] 버튼을 사용하세요.'
+  );
+  if (choice) {
+    showToast('매각 처리가 완료되었습니다. 해당 차대번호는 신규 등록 가능합니다.');
+    closeModal('modal-car-edit');
+  }
+}
+
+// 삭제 컨펌창 (BR-31: 서비스DB만 삭제, 단말기 미연결 시만 가능)
+function confirmDeleteVehicle() {
+  const ok = confirm(
+    '차량을 삭제하시겠습니까?\n\n' +
+    '⚠ 서비스 DB에서만 삭제되며, 차량 DB(통합DB)에서는 삭제되지 않습니다.\n' +
+    '단말기가 연결된 차량은 삭제할 수 없습니다.'
+  );
+  if (ok) {
+    showToast('차량이 서비스 DB에서 삭제되었습니다.');
+    closeModal('modal-car-edit');
+  }
+}
+
+// 저장 — 서비스정보 변경 감지 시 컨펌창 (BR-30)
+let _origCompany = null, _origBranch = null;
+function saveCarEditWithConfirm() {
+  const companyEl = document.querySelector('#modal-car-edit select:nth-of-type(1)');
+  const branchEl  = document.querySelector('#modal-car-edit select:nth-of-type(2)');
+  const curCompany = companyEl ? companyEl.value : null;
+  const curBranch  = branchEl  ? branchEl.value  : null;
+
+  const serviceInfoChanged = (_origCompany !== null && _origCompany !== curCompany) ||
+                             (_origBranch  !== null && _origBranch  !== curBranch);
+
+  if (serviceInfoChanged) {
+    const ok = confirm(
+      '서비스 정보(업체/지점)가 변경되었습니다.\n\n' +
+      '해당 차대번호의 이전 ID를 매각 처리하고 새로운 ID를 생성합니다.\n' +
+      '연결된 단말기는 유지됩니다.\n\n' +
+      '동의하십니까?'
+    );
+    if (!ok) return;
+  }
+  saveAndToast('modal-car-edit', '차량 정보가 저장되었습니다.');
+}
+
+// 상세보기 팝업 열릴 때 초기값 캡처
+function openCarEditModal() {
+  openModal('modal-car-edit');
+  const companyEl = document.querySelector('#modal-car-edit select:nth-of-type(1)');
+  const branchEl  = document.querySelector('#modal-car-edit select:nth-of-type(2)');
+  _origCompany = companyEl ? companyEl.value : null;
+  _origBranch  = branchEl  ? branchEl.value  : null;
+}
+
+// Case 1 / Case 2 분기 토글 (프로토타입 데모용)
+let _editCase = 2;
+function toggleEditCase() {
+  _editCase = _editCase === 2 ? 1 : 2;
+  const banner   = document.getElementById('edit-case-banner');
+  const vinInput = document.getElementById('edit-vin');
+  const vinHint  = document.getElementById('edit-vin-hint');
+  const yearInput = document.getElementById('edit-year');
+  const yearHint  = document.getElementById('edit-year-hint');
+  if (_editCase === 1) {
+    banner.style.background = '#fffbeb';
+    banner.style.borderColor = '#f59e0b';
+    banner.innerHTML = `<span style="color:#f59e0b; font-weight:700; white-space:nowrap;">📋 Case 1</span>
+      <span style="color:var(--gray-6); flex:1; min-width:0;">등록증 없음 — <strong>차대번호·연식 포함 전체</strong> 수정 가능</span>
+      <button class="btn btn-outline btn-sm" style="font-size:10px; color:var(--gray-4); padding:0 6px; white-space:nowrap;" onclick="toggleEditCase()">전환↔</button>`;
+    // Case 1: VIN + 연식 수정 가능
+    if (vinInput)  { vinInput.readOnly = false; vinInput.style.background = ''; vinInput.style.color = ''; }
+    if (vinHint)   vinHint.textContent = 'Case 1 — 차량등록증 미등록: 차대번호 수정 가능.';
+    if (yearInput) { yearInput.readOnly = false; yearInput.style.background = ''; yearInput.style.color = ''; }
+    if (yearHint)  yearHint.textContent = 'Case 1 — 차량등록증 미등록: 연식 수정 가능. ※ VIN 10번째 자리(ISO 3779) 기반으로 산출. 최초등록일 기반 산출 아님 (BR-25).';
+  } else {
+    banner.style.background = 'var(--green-pale,#f0fdf4)';
+    banner.style.borderColor = 'var(--green,#22c55e)';
+    banner.innerHTML = `<span style="color:var(--green); font-weight:700; white-space:nowrap;">📋 Case 2</span>
+      <span style="color:var(--gray-6); flex:1; min-width:0;">등록증 있음 — <strong>차대번호·연식 제외</strong> 수정 가능</span>
+      <button class="btn btn-outline btn-sm" style="font-size:10px; color:var(--gray-4); padding:0 6px; white-space:nowrap;" onclick="toggleEditCase()">전환↔</button>`;
+    // Case 2: VIN + 연식 읽기전용
+    if (vinInput)  { vinInput.readOnly = true; vinInput.style.background = 'var(--gray-1)'; vinInput.style.color = 'var(--gray-4)'; }
+    if (vinHint)   vinHint.textContent = 'Case 2 — 차량등록증 등록됨: 차대번호 읽기 전용 (BR-25). 수정 필요 시 SYS_ADMIN 문의.';
+    if (yearInput) { yearInput.readOnly = true; yearInput.style.background = 'var(--gray-1)'; yearInput.style.color = 'var(--gray-4)'; }
+    if (yearHint)  yearHint.textContent = 'Case 2 — 차량등록증 등록됨: 연식 읽기 전용 (BR-25). ※ VIN 10번째 자리(ISO 3779) 기반 확정값. 수정 필요 시 SYS_ADMIN 문의.';
+  }
+}
+
+// fbp 파일 업로드 시뮬레이션 (카코드·버전 자동입력, 260609)
+function simulateFbpUpload(mode) {
+  const prefix = mode === 'reg' ? 'reg' : 'edit';
+  showToast('fbp 파일 파싱 중...');
+  setTimeout(() => {
+    const sampleCarcode = 'HY-SONATA-2025';
+    const sampleVersion = 'v3.0.2';
+    const codeEl = document.getElementById(prefix + '-carcode-val');
+    const verEl  = document.getElementById(prefix + '-version-val');
+    if (codeEl) { codeEl.value = sampleCarcode; codeEl.style.background = '#eff6ff'; }
+    if (verEl)  { verEl.value  = sampleVersion;  verEl.style.background  = '#eff6ff'; }
+    showToast('✅ fbp 파일에서 카코드(' + sampleCarcode + ')·버전(' + sampleVersion + ')이 자동입력되었습니다.');
+  }, 800);
+}
+
+// ===== 상세보기 팝업 — 등록증 미리보기 (우측 패널) 표시 =====
+function showEditDocInPreview() {
+  const epDoc   = document.getElementById('ep-doc');
+  const epEmpty = document.getElementById('ep-empty');
+  const zoomBtn = document.getElementById('edit-preview-zoom-btn');
+  if (epDoc)   epDoc.style.display   = '';
+  if (epEmpty) epEmpty.style.display = 'none';
+  if (zoomBtn) zoomBtn.style.display = '';
+}
+
+// ===== 상세보기 팝업 — 재업로드 드롭존 토글 =====
+function showEditReuploadPanel() {
+  const zone = document.getElementById('edit-reupload-zone');
+  if (!zone) return;
+  zone.style.display = zone.style.display === 'none' ? '' : 'none';
+}
+
+// ===== 상세보기 팝업 — 인증 상태 전환 (프로토타입 데모용) =====
+let editIsVerified = true;
+function toggleEditAuthState() {
+  editIsVerified = !editIsVerified;
+  const badge         = document.getElementById('edit-auth-badge');
+  const desc          = document.getElementById('edit-auth-desc');
+  const verifiedPanel = document.getElementById('edit-verified-panel');
+  const unverifiedPanel = document.getElementById('edit-unverified-panel');
+  const midBanner     = document.getElementById('edit-unverified-banner');
+  const vinInput      = document.getElementById('edit-vin');
+  const vinHint       = document.getElementById('edit-vin-hint');
+  const yearInput     = document.getElementById('edit-year');
+  const yearHint      = document.getElementById('edit-year-hint');
+  const epDoc         = document.getElementById('ep-doc');
+  const epEmpty       = document.getElementById('ep-empty');
+  const zoomBtn       = document.getElementById('edit-preview-zoom-btn');
+
+  if (editIsVerified) {
+    // VERIFIED 상태 = Case 2(등록증 있음): VIN·연식 읽기전용
+    badge.className   = 'reg-auth-badge rab-verified';
+    badge.textContent = '✓ VERIFIED';
+    if (desc)           desc.textContent = 'OCR + 소유주 검증 완료';
+    if (verifiedPanel)  verifiedPanel.style.display = '';
+    if (unverifiedPanel)unverifiedPanel.style.display = 'none';
+    if (midBanner)      midBanner.style.display = 'none';
+    if (vinInput)       { vinInput.readOnly = true; vinInput.style.background = 'var(--gray-1)'; vinInput.style.color = 'var(--gray-4)'; }
+    if (vinHint)        vinHint.textContent = 'VERIFIED 차량의 VIN은 읽기 전용입니다. 수정 필요 시 SYS_ADMIN 문의.';
+    if (yearInput)      { yearInput.readOnly = true; yearInput.style.background = 'var(--gray-1)'; yearInput.style.color = 'var(--gray-4)'; }
+    if (yearHint)       yearHint.textContent = 'VERIFIED — 연식 읽기 전용 (BR-25). ※ VIN 10번째 자리(ISO 3779) 기반 확정값. 수정 필요 시 SYS_ADMIN 문의.';
+    // 우측 패널: 등록증 표시
+    if (epDoc)   epDoc.style.display   = '';
+    if (epEmpty) epEmpty.style.display = 'none';
+    if (zoomBtn) zoomBtn.style.display = '';
+  } else {
+    // UNVERIFIED 상태 = Case 1(등록증 없음): VIN·연식 수정 가능
+    badge.className   = 'reg-auth-badge rab-unverified';
+    badge.textContent = 'UNVERIFIED';
+    if (desc)           desc.textContent = '등록증 미제출 · 미인증 상태';
+    if (verifiedPanel)  verifiedPanel.style.display = 'none';
+    if (unverifiedPanel)unverifiedPanel.style.display = '';
+    if (midBanner)      midBanner.style.display = '';
+    if (vinInput)       { vinInput.readOnly = false; vinInput.style.background = ''; vinInput.style.color = ''; }
+    if (vinHint)        vinHint.textContent = 'UNVERIFIED 차량은 VIN을 수동 입력/수정할 수 있습니다.';
+    if (yearInput)      { yearInput.readOnly = false; yearInput.style.background = ''; yearInput.style.color = ''; }
+    if (yearHint)       yearHint.textContent = 'UNVERIFIED — 연식 수정 가능. ※ VIN 10번째 자리(ISO 3779) 기반으로 입력하세요 (BR-25). 등록증 최초등록일 기반 산출 아님.';
+    // 우측 패널: 빈 플레이스홀더
+    if (epDoc)   epDoc.style.display   = 'none';
+    if (epEmpty) epEmpty.style.display = '';
+    if (zoomBtn) zoomBtn.style.display = 'none';
+  }
+}
+
+// ===== 상세보기 팝업 — 등록증 업로드 시뮬레이션 (좌측 패널 드롭존, [기능 B-4-3]) =====
+// GAP-v2-03: VIN 불일치 에러 케이스 포함
+function simulateEditDocUpload() {
+  const vinInput = document.getElementById('edit-vin');
+  const vinVal   = vinInput ? vinInput.value.trim() : '';
+
+  // 프로토타입 시뮬레이션: VIN이 비어있거나 'W'로 시작하면 불일치 케이스
+  const isMismatch = !vinVal || vinVal.startsWith('W');
+
+  // 드롭존 상태 — VERIFIED 재업로드 vs UNVERIFIED 업로드 분기
+  const isReupload = editIsVerified;
+  const idleId    = isReupload ? 'edit-dz-idle'    : 'edit-dz-idle-u';
+  const loadingId = isReupload ? 'edit-dz-loading' : 'edit-dz-loading-u';
+  const doneId    = isReupload ? 'edit-dz-done'    : 'edit-dz-done-u';
+
+  const idleEl    = document.getElementById(idleId);
+  const loadingEl = document.getElementById(loadingId);
+  const doneEl    = document.getElementById(doneId);
+
+  if (idleEl)    idleEl.style.display    = 'none';
+  if (loadingEl) loadingEl.style.display = '';
+
+  setTimeout(() => {
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (isMismatch) {
+      // VIN 불일치 — 업로드 차단
+      if (idleEl)  idleEl.style.display = '';
+      const midBanner = document.getElementById('edit-unverified-banner');
+      if (midBanner) {
+        midBanner.className = 'reg-banner reg-banner-warn';
+        midBanner.innerHTML = '⚠ 등록증의 차대번호가 현재 등록된 차대번호와 일치하지 않습니다. 등록증을 다시 확인해 주세요.';
+        midBanner.style.display = '';
+      }
+      showToast('⚠ VIN 불일치 · 업로드 차단');
+      return;
+    }
+
+    // VIN 일치 — 완료 처리
+    if (doneEl) doneEl.style.display = '';
+
+    if (!isReupload) {
+      // UNVERIFIED → VERIFIED 전환
+      editIsVerified = true;
+      const badge         = document.getElementById('edit-auth-badge');
+      const desc          = document.getElementById('edit-auth-desc');
+      const verifiedPanel = document.getElementById('edit-verified-panel');
+      const unverifiedPanel = document.getElementById('edit-unverified-panel');
+      const midBanner     = document.getElementById('edit-unverified-banner');
+      const vinHint       = document.getElementById('edit-vin-hint');
+      const epDoc         = document.getElementById('ep-doc');
+      const epEmpty       = document.getElementById('ep-empty');
+      const zoomBtn       = document.getElementById('edit-preview-zoom-btn');
+
+      if (badge)          { badge.className = 'reg-auth-badge rab-verified'; badge.textContent = '✓ VERIFIED'; }
+      if (desc)           desc.textContent = 'OCR + VIN 일치 확인 완료 · VERIFIED 전환됨';
+      if (verifiedPanel)  verifiedPanel.style.display = '';
+      if (unverifiedPanel)unverifiedPanel.style.display = 'none';
+      if (midBanner)      midBanner.style.display = 'none';
+      if (vinInput)       { vinInput.readOnly = true; vinInput.style.background = 'var(--gray-1)'; vinInput.style.color = 'var(--gray-4)'; }
+      if (vinHint)        vinHint.textContent = 'VERIFIED 차량의 VIN은 읽기 전용입니다.';
+      if (epDoc)   epDoc.style.display   = '';
+      if (epEmpty) epEmpty.style.display = 'none';
+      if (zoomBtn) zoomBtn.style.display = '';
+      showToast('✅ 차량등록증이 확인되어 VERIFIED 상태로 전환되었습니다.');
+    } else {
+      // VERIFIED 재업로드 완료
+      showToast('✅ 새 차량등록증이 업로드되었습니다. (이력 저장 완료)');
+      setTimeout(() => {
+        const zone = document.getElementById('edit-reupload-zone');
+        if (zone) zone.style.display = 'none';
+        // 드롭존 idle 복원
+        if (doneEl) doneEl.style.display = 'none';
+        if (idleEl) idleEl.style.display = '';
+      }, 1200);
+    }
+  }, 1800);
+}
+
+// ===== Path B: 소유주 검증 API 시뮬레이션 =====
+function simulatePathBQuery(btn) {
+  const orig = btn.textContent;
+  btn.textContent='조회 중...'; btn.disabled=true;
+  setRegAuth('pending', '소유주 검증 API 조회 중...');
+
+  // fitem 추가
+  const plate = document.getElementById('reg-b-plate').value.trim() || '56다7890';
+  const owner = document.getElementById('reg-b-owner').value.trim() || '홍길동';
+  const bflist = document.getElementById('reg-b-flist');
+  bflist.innerHTML='';
+  const bfi = document.createElement('div');
+  bfi.className='fitem-v';
+  bfi.innerHTML=`<div class="fitem-vrow"><div class="fitem-vicon">🔍</div><div class="fitem-vbody"><div class="fitem-vname">${plate} · ${owner}</div><div class="fitem-vstatus" id="reg-bfi-status"><span class="reg-spin"></span> API 조회 중...</div></div></div>`;
+  bflist.appendChild(bfi);
+
+  setTimeout(() => {
+    btn.textContent=orig; btn.disabled=false;
+    const plateVal = document.getElementById('reg-b-plate').value.trim();
+    const ownerVal = document.getElementById('reg-b-owner').value.trim();
+    if (!plateVal || !ownerVal) {
+      bflist.innerHTML='';
+      document.getElementById('path-b-result').style.display='none';
+      document.getElementById('path-b-fail').style.display='';
+      setRegAuth('unverified', '입력 정보를 확인해 주세요');
+      return;
+    }
+    document.getElementById('path-b-result').style.display='';
+    document.getElementById('path-b-fail').style.display='none';
+    // F-1: 차량번호
+    document.getElementById('reg-carnum').value=plateVal; document.getElementById('reg-carnum').classList.add('autofill');
+    // F-2: 제조연도
+    document.getElementById('reg-year').value='2023'; document.getElementById('reg-year').classList.add('autofill');
+    // F-3: 차량등록일(최초등록일)
+    document.getElementById('reg-firstdate').value='2023-06-20'; document.getElementById('reg-firstdate').classList.add('autofill'); document.getElementById('reg-firstdate').classList.remove('req-field');
+    // F-6: CARDB 제원 (연료·배기량·승차정원)
+    document.getElementById('reg-cc').value='1999'; document.getElementById('reg-cc').classList.add('autofill');
+    document.getElementById('reg-cap').value='5'; document.getElementById('reg-cap').classList.add('autofill');
+    document.getElementById('reg-fuel').value='가솔린'; document.getElementById('reg-fuel').classList.add('autofill');
+    // F-7: 차대번호(VIN)
+    const regVin = 'KMHC241BBPA123456';
+    document.getElementById('reg-vin').value=regVin; document.getElementById('reg-vin').classList.add('autofill'); document.getElementById('reg-vin').classList.remove('req-field');
+    // 260715: 제조사·모델명 캐스케이드 사전 선택 (CARDB 연동, BR-18)
+    preselectRegCascade(true, '현대', '쏘나타');
+    setRegAuth('unverified', '소유주 검증 완료 (F-1~F-7 자동 채움) · 하위모델명(선택) 직접 입력 가능');
+    // FMS 자체 중복 체크(BR-34) 최우선 수행 → 중복 없을 때만 통합DB VIN 체크(BR-23) 진행
+    if (!checkFmsDuplicate(regVin, plateVal)) {
+      checkVINDatabase(regVin, false);
+    }
+
+    const statusEl = document.getElementById('reg-bfi-status');
+    if (statusEl) statusEl.innerHTML='<span style="color:var(--green);">✓</span> 조회 완료';
+    const badge = document.createElement('span');
+    badge.className='fitem-vbadge fvb-unverified'; badge.textContent='UNVERIFIED';
+    bfi.querySelector('.fitem-vrow').appendChild(badge);
+
+    // [v1.4] Path B 성공 → [목록에 추가] 버튼 표시
+    const addBtn = document.getElementById('reg-add-btn');
+    if (addBtn) addBtn.style.display = '';
+  }, 1800);
+}
+
+// ===== 차량 등록 모달 — 제조사·모델명 imsform 캐스케이드 (260715: Path A/B/C 전체 공통, BR-18) =====
+function updateRegBrandList() {
+  const sel = document.querySelector('input[name="regVehicleType"]:checked');
+  const type = sel ? sel.value : null;
+  const brandSel = document.getElementById('regv-brand');
+  const modelSel = document.getElementById('regv-model');
+  brandSel.innerHTML='<option value="">브랜드 선택</option>';
+  modelSel.innerHTML='<option value="">제조사 선택 후</option>';
+  modelSel.disabled=true;
+  if (!type || !VEHICLE_DB[type]) { brandSel.disabled=true; return; }
+  brandSel.disabled=false;
+  Object.keys(VEHICLE_DB[type]).forEach(b => {
+    const opt=document.createElement('option'); opt.value=b; opt.textContent=b;
+    brandSel.appendChild(opt);
+  });
+}
+function updateRegModelList() {
+  const sel = document.querySelector('input[name="regVehicleType"]:checked');
+  const type = sel ? sel.value : null;
+  const brand = document.getElementById('regv-brand').value;
+  const modelSel = document.getElementById('regv-model');
+  modelSel.innerHTML='<option value="">모델 선택</option>';
+  if (!type || !brand || !VEHICLE_DB[type]?.[brand]) { modelSel.disabled=true; return; }
+  modelSel.disabled=false;
+  VEHICLE_DB[type][brand].forEach(m => {
+    const opt=document.createElement('option'); opt.value=m; opt.textContent=m;
+    modelSel.appendChild(opt);
+  });
+}
+
+// ===== Path A/B 자동 채움값으로 제조사·모델명 캐스케이드 사전 선택 (pre-select, 260715 BR-18) =====
+function preselectRegCascade(isDomestic, brand, model) {
+  const radioId = isDomestic ? 'regv-dom' : 'regv-imp';
+  const radioEl = document.getElementById(radioId);
+  if (radioEl) { radioEl.checked = true; updateRegBrandList(); }
+  setTimeout(() => {
+    const bSel = document.getElementById('regv-brand');
+    if (bSel) { bSel.value = brand; bSel.classList.add('autofill'); updateRegModelList(); }
+    setTimeout(() => {
+      const mSel = document.getElementById('regv-model');
+      if (mSel) { mSel.value = model; mSel.classList.add('autofill'); }
+    }, 50);
+  }, 50);
+}
+
+// ===== [v1.4] 등록 예정 목록 (Staging) — 차량 등록 팝업 내부 =====
+let regStagingItems = [];
+
+function addToRegStaging(source, vin, carnum, verified) {
+  if (regStagingItems.length >= 10) {
+    showToast('등록 예정 목록이 가득 찼습니다 (최대 10건). 먼저 [등록하기]를 눌러 주세요.');
+    return false;
+  }
+  const id = 'stg-' + Date.now();
+  regStagingItems.push({ id, source, vin, carnum, verified });
+  renderRegStagingUI();
+  updateRegSubmitBtn();
+  return true;
+}
+
+function removeRegStagingItem(id) {
+  regStagingItems = regStagingItems.filter(it => it.id !== id);
+  renderRegStagingUI();
+  updateRegSubmitBtn();
+}
+
+function renderRegStagingUI() {
+  const flist = document.getElementById('reg-stg-flist');
+  const cnt   = document.getElementById('reg-stg-count');
+  if (!flist) return;
+  if (cnt) cnt.textContent = regStagingItems.length;
+  if (regStagingItems.length === 0) {
+    flist.innerHTML = '<div style="font-size:11px; color:var(--gray-3); text-align:center; padding:10px 0;">아직 추가된 차량이 없습니다.</div>';
+    return;
+  }
+  flist.innerHTML = regStagingItems.map(it => `
+    <div style="background:#fff; border:1px solid #bdd7ff; border-radius:6px; padding:6px 8px; font-size:10.5px;">
+      <div style="display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+        <span style="font-size:9px; color:var(--gray-4); background:#f0f6ff; padding:1px 5px; border-radius:3px; white-space:nowrap;">${it.source}</span>
+        <span class="badge ${it.verified ? 'badge-green' : 'badge-gray'}" style="font-size:9px; padding:1px 5px;">${it.verified ? '✓' : '?'}</span>
+        <span style="font-family:monospace; font-size:10px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--gray-6);">${it.vin}</span>
+        <button onclick="removeRegStagingItem('${it.id}')" style="border:none; background:none; cursor:pointer; color:var(--gray-4); font-size:16px; line-height:1; padding:0 2px;" title="삭제">×</button>
+      </div>
+      <div style="color:var(--gray-5); padding-left:2px;">${it.carnum}</div>
+    </div>`).join('');
+}
+
+function updateRegSubmitBtn() {
+  const btn = document.getElementById('reg-submit-btn');
+  if (!btn) return;
+  btn.textContent = regStagingItems.length > 0
+    ? '등록하기 (' + regStagingItems.length + '건)'
+    : '등록하기';
+}
+
+function closeCarRegModal() {
+  if (regStagingItems.length > 0) {
+    if (!confirm('등록 예정 목록에 ' + regStagingItems.length + '건이 있습니다.\n취소 시 등록 예정 목록이 초기화됩니다. 계속하시겠습니까?')) return;
+    regStagingItems = [];
+    renderRegStagingUI();
+    updateRegSubmitBtn();
+  }
+  closeModal('modal-car-reg');
+}
+
+// Path B·C 전용 — 현재 폼 데이터를 목록에 추가
+function addCurrentToStaging() {
+  const vin    = document.getElementById('reg-vin')?.value    || '—';
+  const carnum = document.getElementById('reg-carnum')?.value || '—';
+  const source = currentRegPath === 'B' ? 'Path B' : 'Path C';
+  const ok = addToRegStaging(source, vin || '—', carnum || '—', false);
+  if (!ok) return;
+
+  // Path B: 결과 배너 숨기고 조회 폼 초기화
+  if (currentRegPath === 'B') {
+    const resEl = document.getElementById('path-b-result');
+    if (resEl) resEl.style.display = 'none';
+    const bflist = document.getElementById('reg-b-flist');
+    if (bflist) bflist.innerHTML = '';
+    const plateEl = document.getElementById('reg-b-plate');
+    const ownerEl = document.getElementById('reg-b-owner');
+    if (plateEl) plateEl.value = '';
+    if (ownerEl) ownerEl.value = '';
+    setRegAuth('unverified', '다음 차량을 조회하세요.');
+    // [목록에 추가] 버튼 숨기기 (결과 사라졌으므로)
+    const addBtn = document.getElementById('reg-add-btn');
+    if (addBtn) addBtn.style.display = 'none';
+  }
+  // 폼 필드 초기화 (autofill 클래스 제거)
+  ['reg-vin','reg-carnum','reg-year','reg-carname','reg-firstdate','reg-cc','reg-cap'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.value=''; el.classList.remove('autofill','req-field'); }
+  });
+  showRegPreview(currentRegPath === 'B' ? 'pathb' : 'pathc');
+  showToast('목록에 추가되었습니다. (' + regStagingItems.length + '건 누적)');
+}
+
+// ===== 차량 등록 제출 =====
+function submitVehicleReg() {
+  const btn = document.getElementById('reg-submit-btn');
+
+  // BR-34(260715): [등록하기] 클릭 시 FMS 자체 차대번호·차량번호 중복 체크를 최우선 수행 (Path A/B/C 공통).
+  // Path C처럼 별도 실시간 조회 이벤트가 없는 경로를 위한 최종 안전망 — OCR/조회 완료 시점에도 이미 checkFmsDuplicate가 수행됨.
+  const curVin    = document.getElementById('reg-vin')?.value?.trim() || '';
+  const curCarnum = document.getElementById('reg-carnum')?.value?.trim() || '';
+  if (checkFmsDuplicate(curVin, curCarnum)) {
+    showToast('🚫 동일한 차대번호(차량번호) 운영 중 차량이 존재하여 등록할 수 없습니다. (BR-34)');
+    return;
+  }
+
+  // [v1.4] 등록 예정 목록에 항목이 있으면 일괄 등록
+  if (regStagingItems.length > 0) {
+    const total = regStagingItems.length;
+    btn.textContent = '등록 중... (' + total + '건)'; btn.disabled = true;
+    setTimeout(() => {
+      regStagingItems = [];
+      renderRegStagingUI();
+      updateRegSubmitBtn();
+      updateBulkBtnLabel();
+      saveAndToast('modal-car-reg', '✅ ' + total + '건 일괄 등록 완료. (POST /api/v1/vehicles/bulk · 성공: ' + total + '건)');
+      btn.disabled = false;
+    }, 2500);
+    return;
+  }
+
+  // 단건 등록 (기존 동작)
+  if (currentRegPath === 'A') {
+    btn.textContent='등록 중... (소유주 검증)'; btn.disabled=true;
+    setTimeout(() => {
+      updateRegSubmitBtn(); btn.disabled=false;
+      setRegAuth('verified', '차량등록증 OCR + 소유주 검증 완료 · VERIFIED 등록');
+      saveAndToast('modal-car-reg','차량이 VERIFIED 상태로 등록되었습니다.');
+    }, 2500);
+  } else {
+    saveAndToast('modal-car-reg','차량이 UNVERIFIED 상태로 등록되었습니다. 등록증 확보 시 VERIFIED 전환 가능합니다.');
+  }
+}
+
+// ===== 등록증 라이트박스 =====
+function openRegLightbox() { document.getElementById('reg-lightbox').classList.add('open'); }
+function closeRegLightbox() { document.getElementById('reg-lightbox').classList.remove('open'); }
+// 수정 팝업 등록증 확대 (우측 패널 🔍 버튼 → modal-edit-doc 라이트박스)
+function openEditLightbox() { document.getElementById('modal-edit-doc').classList.add('open'); }
+
+// ===== 카코드 매칭 — 서버 반영 카코드 선택 시 차량 정보 자동 채움 (BR-21) =====
+function matchCarcodeData(sel) {
+  const key = sel.value;
+  if (!key) return;
+  const spec = CARCODE_SPECS[key];
+  if (!spec) return;
+
+  const fuelEl = document.getElementById('reg-fuel');
+  const ccEl   = document.getElementById('reg-cc');
+  const capEl  = document.getElementById('reg-cap');
+
+  let hasConflict = false;
+
+  function tryFill(el, val) {
+    if (!el) return;
+    if (el.classList.contains('autofill')) { hasConflict = true; }
+    else { el.value = val; }
+  }
+
+  tryFill(fuelEl, spec.fuel);
+  tryFill(ccEl,   spec.cc);
+  tryFill(capEl,  spec.cap);
+
+  // 260715: 제조사·모델명 캐스케이드도 pre-select (전 Path 공통, BR-18)
+  const isDom = Object.keys(VEHICLE_DB.domestic).includes(spec.brand);
+  preselectRegCascade(isDom, spec.brand, spec.model);
+
+  if (hasConflict) showToast('카코드 정보와 다를 수 있습니다. 직접 확인해 주세요.');
+  else if (spec.fuel || spec.cc || spec.cap) showToast('카코드 제원이 자동 입력되었습니다.');
+}
+
+// ===== Path B 서브모드 전환 =====
+function switchPathBMode(mode) {
+  const isA = mode === 'A';
+  const tabA  = document.getElementById('ptab-b-a');
+  const tabB  = document.getElementById('ptab-b-b');
+  const panA  = document.getElementById('reg-path-b-a');
+  const panB  = document.getElementById('reg-path-b-b');
+
+  if (tabA) { tabA.style.background = isA ? 'var(--blue)' : '#fff'; tabA.style.color = isA ? '#fff' : 'var(--gray-5)'; tabA.style.fontWeight = isA ? '600' : '500'; }
+  if (tabB) { tabB.style.background = isA ? '#fff' : 'var(--blue)'; tabB.style.color = isA ? 'var(--gray-5)' : '#fff'; tabB.style.fontWeight = isA ? '500' : '600'; }
+  if (panA) panA.style.display = isA ? '' : 'none';
+  if (panB) panB.style.display = isA ? 'none' : '';
+
+  // 상태 초기화
+  const bflist = document.getElementById('reg-b-flist');
+  if (bflist) bflist.innerHTML = '';
+  const resEl = document.getElementById('path-b-result');
+  const failEl = document.getElementById('path-b-fail');
+  if (resEl) resEl.style.display = 'none';
+  if (failEl) failEl.style.display = 'none';
+}
+
+// ===== Path B 서브모드 B: VIN 단독 조회 시뮬레이션 (BR-22) =====
+function simulateVINQuery(btn) {
+  const vinEl = document.getElementById('reg-b-vin');
+  const hintEl = document.getElementById('reg-b-vin-hint');
+  if (!vinEl) return;
+
+  const vin = vinEl.value.trim().toUpperCase();
+  const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+
+  if (!VIN_RE.test(vin)) {
+    if (hintEl) { hintEl.textContent = '⚠ 차대번호는 영문 대문자와 숫자 17자리입니다 (I, O, Q 제외)'; hintEl.style.color = 'var(--red)'; }
+    vinEl.style.borderColor = 'var(--red)';
+    return;
+  }
+  if (hintEl) { hintEl.textContent = '영문 대문자+숫자 17자리 (I, O, Q 제외) · 소유주 검증 미수행 → UNVERIFIED 등록'; hintEl.style.color = ''; }
+  vinEl.style.borderColor = '';
+
+  const orig = btn.textContent;
+  btn.textContent = '조회 중...'; btn.disabled = true;
+  setRegAuth('pending', 'VIN 조회 중...');
+
+  const bflist = document.getElementById('reg-b-flist');
+  bflist.innerHTML = '';
+  const bfi = document.createElement('div');
+  bfi.className = 'fitem-v';
+  bfi.innerHTML = `<div class="fitem-vrow"><div class="fitem-vicon">🔢</div><div class="fitem-vbody"><div class="fitem-vname">${vin}</div><div class="fitem-vstatus" id="reg-vfi-status"><span class="reg-spin"></span> VIN 조회 중...</div></div></div>`;
+  bflist.appendChild(bfi);
+
+  setTimeout(() => {
+    btn.textContent = orig; btn.disabled = false;
+
+    // 모의 데이터 채우기
+    const mockVin = { carnum:'56다7890', year:'2023', fuel:'디젤', cc:'1995', cap:'5', mfr:'BMW / 5시리즈' };
+    document.getElementById('reg-vin').value    = vin; document.getElementById('reg-vin').classList.add('autofill'); document.getElementById('reg-vin').classList.remove('req-field');
+    document.getElementById('reg-carnum').value = mockVin.carnum; document.getElementById('reg-carnum').classList.add('autofill');
+    document.getElementById('reg-year').value   = mockVin.year;   document.getElementById('reg-year').classList.add('autofill');
+    document.getElementById('reg-cc').value     = mockVin.cc;     document.getElementById('reg-cc').classList.add('autofill');
+    document.getElementById('reg-cap').value    = mockVin.cap;    document.getElementById('reg-cap').classList.add('autofill');
+    document.getElementById('reg-fuel').value   = mockVin.fuel;   document.getElementById('reg-fuel').classList.add('autofill');
+    // 260715: 제조사·모델명 캐스케이드 사전 선택 (VIN 조회 연동, BR-18)
+    preselectRegCascade(false, 'BMW', '5시리즈');
+
+    setRegAuth('unverified', 'VIN 조회 완료 · 소유주 검증 미수행 · UNVERIFIED 등록');
+    // FMS 자체 중복 체크(BR-34) 최우선 수행 → 중복 없을 때만 통합DB VIN 체크(BR-23) 진행
+    if (!checkFmsDuplicate(vin, mockVin.carnum)) {
+      checkVINDatabase(vin, false);
+    }
+    document.getElementById('path-b-result').innerHTML = '✅ VIN 조회 완료. 하위모델명(선택)·최초등록일은 직접 입력해 주세요. (UNVERIFIED 등록)';
+    document.getElementById('path-b-result').style.display = '';
+
+    const statusEl = document.getElementById('reg-vfi-status');
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--green);">✓</span> VIN 조회 완료';
+    const badge = document.createElement('span');
+    badge.className = 'fitem-vbadge fvb-unverified'; badge.textContent = 'UNVERIFIED';
+    bfi.querySelector('.fitem-vrow').appendChild(badge);
+    showRegPreview('pathb');
+  }, 1500);
+}
+
+// ===== 토스트 단축 =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== 차량관리 필터 조회 — 검색 결과 수 표시 ([변경-14]) =====
+function applyCarFilter() {
+  const carcodeFilter = document.getElementById('filter-carcode-yn')?.value;
+  const regdocFilter  = document.getElementById('filter-regdoc-yn')?.value;
+  const countEl = document.getElementById('car-search-count');
+
+  // 프로토타입 시뮬레이션: 필터 적용 시 임의 결과 수 표시
+  let resultCount = null;
+  if (carcodeFilter === 'Y') resultCount = 2;
+  else if (carcodeFilter === 'N') resultCount = 1;
+  else if (regdocFilter === 'Y') resultCount = 2;
+  else if (regdocFilter === 'N') resultCount = 1;
+
+  if (countEl) {
+    if (resultCount !== null) {
+      countEl.textContent = `(검색 결과: ${resultCount}대)`;
+    } else {
+      countEl.textContent = '';
+    }
+  }
+  showToast('조회 조건이 적용되었습니다.');
+}
+
+// ===== LNB 페이지 전환 =====
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.querySelectorAll('.lnb-item').forEach(i => i.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>
