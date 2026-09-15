@@ -1,17 +1,24 @@
-import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { resolve } from 'path'
 
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/design-connect-staff/' : '/',
+  base: command === 'build' ? '/2609_preferred/' : '/',
+
+  build: {
+    outDir: 'docs',
+  },
+
   plugins: [react(), tailwindcss()],
+
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
     },
   },
+
   server: {
     port: 5175,
   },
-}));
+}))
