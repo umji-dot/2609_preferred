@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import { resolve } from 'path'
+import { resolve } from 'node:path';
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/2609_preferred/' : '/',
@@ -21,4 +22,4 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5175,
   },
-}))
+}));
