@@ -43,7 +43,7 @@ export default function WorkTasksPage() {
     return getInitialTasks(job);
   }, [job, isInstall]);
 
-  const [tasks, setTasks] = useState<WorkTask[]>(initialTasks);
+  const [tasks] = useState<WorkTask[]>(initialTasks);
 
   if (!job) {
     return (
